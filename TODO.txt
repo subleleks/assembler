@@ -1,4 +1,4 @@
-support instructions with explicit addresses (numbers)
+support instructions with explicit addresses (signed decimal numbers)
 support instructions with array offsets
 support data in hex format
 support uninitalized variables
