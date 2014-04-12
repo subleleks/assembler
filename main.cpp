@@ -135,11 +135,11 @@ int main(int argc, char* argv[]) {
   {
     uint32_t tmp;
     
-    // output number of exported symbols
+    // write number of exported symbols
     tmp = exported.size();
     f.write((const char*)&tmp, sizeof(uint32_t));
     
-    // output exported symbols
+    // write exported symbols
     for (auto& exp : exported) {
       // string
       f.write(exp.c_str(), exp.size() + 1);
@@ -149,20 +149,20 @@ int main(int argc, char* argv[]) {
       f.write((const char*)&tmp, sizeof(uint32_t));
     }
     
-    // output number of symbols of pending references
+    // write number of symbols of pending references
     tmp = references.size();
     f.write((const char*)&tmp, sizeof(uint32_t));
     
-    // output symbols of pending references
+    // write symbols of pending references
     for (auto& sym : references) {
       // string
       f.write(sym.first.c_str(), sym.first.size() + 1);
       
-      // output number of references to current symbol
+      // write number of references to current symbol
       tmp = sym.second.size();
       f.write((const char*)&tmp, sizeof(uint32_t));
       
-      // output references to current symbol
+      // write references to current symbol
       for (auto& ref : sym.second) {
         // address
         tmp = ref.first;
@@ -174,11 +174,11 @@ int main(int argc, char* argv[]) {
       }
     }
     
-    // assembled code size
+    // write assembled code size
     tmp = ip;
     f.write((const char*)&tmp, sizeof(uint32_t));
     
-    // assembled code
+    // write assembled code
     f.write((const char*)mem, sizeof(uword_t)*ip);
   }
   
