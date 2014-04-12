@@ -175,8 +175,7 @@ int main(int argc, char* argv[]) {
     }
     
     // write assembled code size
-    tmp = ip;
-    f.write((const char*)&tmp, sizeof(uint32_t));
+    f.write((const char*)&ip, sizeof(address_t));
     
     // write assembled code
     f.write((const char*)mem, sizeof(uword_t)*ip);
