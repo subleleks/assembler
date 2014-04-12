@@ -1,0 +1,4 @@
+support instructions with explicit addresses (numbers)
+support data in hex format
+support uninitalized variables
+support initialized and uninitalized arrays
