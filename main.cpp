@@ -68,8 +68,11 @@ int main(int argc, char* argv[]) {
   
   do {
     f >> buf;
-    if (buf[buf.size() - 1] == ':')
+    if (buf[buf.size() - 1] == ':') {
       symbols[buf.substr(0, buf.size() - 1)] = ip;
+      if (buf == "start:")
+        exported.insert(buf.substr(0, buf.size() - 1));
+    }
     else if (buf != ".data") {
       if (symbols.find(buf) == symbols.end())
         references[buf].push_back(pair<address_t, field_t>(ip, A));
