@@ -74,10 +74,11 @@ int main(int argc, char* argv[]) {
         exported.insert(buf.substr(0, buf.size() - 1));
     }
     else if (buf != ".data") {
+      word = 0;
       if (symbols.find(buf) == symbols.end())
         references[buf].push_back(pair<address_t, field_t>(ip, A));
       else
-        word  = ((uword_t)((symbols[buf] - ip) & ADDRESS_MASK)) << 2*ADDRESS_WIDTH;
+        word |= ((uword_t)((symbols[buf] - ip) & ADDRESS_MASK)) << 2*ADDRESS_WIDTH;
       f >> buf;
       if (symbols.find(buf) == symbols.end())
         references[buf].push_back(pair<address_t, field_t>(ip, B));
