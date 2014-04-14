@@ -1,2 +1,2 @@
 all:
-	g++ main.cpp -o subleq-assembler -std=c++11
+	g++ main.cpp -o subleq-asm -std=c++11

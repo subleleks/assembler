@@ -3,6 +3,11 @@ assembler
 
 C++ program to convert subleq assembly text file to object file.
 
+```
+To compile: make
+Usage mode: subleq-asm <subleq_assembly_file> <binary_output>
+```
+
 Input example:
 ```asm
 .export

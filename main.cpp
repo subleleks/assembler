@@ -40,7 +40,7 @@ const uword_t   J_MASK        = ~(((uword_t)(MEM_WORDS - 1)) << 0*ADDRESS_WIDTH)
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-    fprintf(stderr, "Usage mode: subleq-assembler <subleq_assembly_file> <binary_output>\n");
+    fprintf(stderr, "Usage mode: subleq-asm <subleq_assembly_file> <binary_output>\n");
     return 0;
   }
   
