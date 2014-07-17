@@ -29,7 +29,7 @@ typedef map<string, list<pair<address_t, field_t>>>::iterator map_iterator;
 typedef list<pair<address_t, field_t>>::iterator list_iterator;
 
 #ifndef MEM_WORDS
-#define MEM_WORDS 8192
+#define MEM_WORDS 0x2000
 #endif
 
 const address_t ADDRESS_MASK  = MEM_WORDS - 1;
