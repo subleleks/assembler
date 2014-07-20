@@ -11,12 +11,12 @@ Usage mode: subleq-asm <subleq_assembly_file> <binary_output>
 Input example:
 ```asm
 .export
-    ln
-.text
-  ln:
-    A B ln
-    A B C
+    label
 .data
     A 5
     B 123
+.text
+  label:
+    A B label
+    A 0xFF C
 ```
