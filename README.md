@@ -5,7 +5,7 @@ C++ program to convert subleq assembly text file to object file.
 
 ```
 To compile: make
-Usage mode: subleq-asm <subleq_assembly_file> <binary_output>
+Usage mode: subleq-asm <assembly_file> <object_file>
 ```
 
 Input example:
