@@ -36,7 +36,7 @@ set<string> exported;
 map<string, address_t> symbols;
 map<string, list<pair<address_t, field_t>>> references;
 list<pair<address_t, field_t>> absolute;
-address_t code_size = 0;
+address_t mem_size = 0;
 uword_t* mem = new uword_t[MEM_WORDS];
 
 inline void readField(uword_t& instr, field_t field) {
@@ -45,12 +45,12 @@ inline void readField(uword_t& instr, field_t field) {
     address_t tmp;
     sscanf(buf.c_str(), "%i", &tmp);
     instr |= (tmp << mult*ADDRESS_WIDTH);
-    absolute.emplace_back(code_size, field);
+    absolute.emplace_back(mem_size, field);
   }
   else {
     auto sym = symbols.find(buf);
     if (sym == symbols.end())
-      references[buf].emplace_back(code_size, field);
+      references[buf].emplace_back(mem_size, field);
     else
       instr |= (uword_t(sym->second) << mult*ADDRESS_WIDTH);
   }
@@ -71,13 +71,13 @@ int main(int argc, char* argv[]) {
   }
   
   for (f >> buf; buf != ".text"; f >> buf) { // reading data section
-    symbols[buf.substr(0, buf.size() - 1)] = code_size;
-    f >> mem[code_size++];
+    symbols[buf.substr(0, buf.size() - 1)] = mem_size;
+    f >> mem[mem_size++];
   }
   
   for (f >> buf; !f.eof(); f >> buf) { // reading text section
     if (buf[buf.size() - 1] == ':') { // label found
-      symbols[buf.substr(0, buf.size() - 1)] = code_size;
+      symbols[buf.substr(0, buf.size() - 1)] = mem_size;
       
       if (buf == "start:") // exporting start label
         exported.insert(string("start"));
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
     readField(instr, B);
     f >> buf;
     readField(instr, J);
-    mem[code_size++] = instr;
+    mem[mem_size++] = instr;
   }
   
   f.close();
@@ -184,10 +184,10 @@ int main(int argc, char* argv[]) {
     }
     
     // write assembled code size
-    f.write((const char*)&code_size, sizeof(address_t));
+    f.write((const char*)&mem_size, sizeof(address_t));
     
     // write assembled code
-    f.write((const char*)mem, sizeof(uword_t)*code_size);
+    f.write((const char*)mem, sizeof(uword_t)*mem_size);
   }
   
   f.close();
