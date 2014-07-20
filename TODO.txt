@@ -1,5 +1,1 @@
-support instructions with explicit addresses (signed decimal numbers)
-support instructions with array offsets
-support data in hex format
-support uninitalized variables
-support initialized and uninitalized arrays
+support instructions with explicit addresses
