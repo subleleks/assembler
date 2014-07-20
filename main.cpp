@@ -31,19 +31,37 @@ enum field_t {
 
 const uword_t ADDRESS_WIDTH = uword_t(log2(double(MEM_WORDS)));
 
+fstream f;
+string buf;
+set<string> exported;
+map<string, address_t> symbols;
+map<string, list<pair<address_t, field_t>>> references;
+list<pair<address_t, field_t>> absolute;
+address_t code_size = 0;
+uword_t* mem = new uword_t[MEM_WORDS];
+
+inline void readField(uword_t& instr, field_t field) {
+  int mult = field == A ? 2 : (field == B ? 1 : 0);
+  if (buf[0] == '0' && buf[1] == 'x') {
+    address_t tmp;
+    sscanf(buf.c_str(), "%i", &tmp);
+    instr |= (tmp << mult*ADDRESS_WIDTH);
+    absolute.emplace_back(code_size, field);
+  }
+  else {
+    auto sym = symbols.find(buf);
+    if (sym == symbols.end())
+      references[buf].emplace_back(code_size, field);
+    else
+      instr |= (uword_t(sym->second) << mult*ADDRESS_WIDTH);
+  }
+}
+
 int main(int argc, char* argv[]) {
   if (argc != 3) {
     fprintf(stderr, "Usage mode: subleq-asm <assembly_file> <object_file>\n");
     return 0;
   }
-  
-  fstream f;
-  string buf;
-  set<string> exported;
-  map<string, address_t> symbols;
-  map<string, list<pair<address_t, field_t>>> references;
-  address_t code_size = 0;
-  uword_t* mem = new uword_t[MEM_WORDS];
   
   f.open(argv[1]);
   
@@ -69,30 +87,11 @@ int main(int argc, char* argv[]) {
     }
     
     uword_t instr = 0;
-    
-    // field A
-    auto sym = symbols.find(buf);
-    if (sym == symbols.end())
-      references[buf].emplace_back(code_size, A);
-    else
-      instr |= (uword_t(sym->second) << 2*ADDRESS_WIDTH);
-    
-    // field B
+    readField(instr, A);
     f >> buf;
-    sym = symbols.find(buf);
-    if (sym == symbols.end())
-      references[buf].emplace_back(code_size, B);
-    else
-      instr |= (uword_t(sym->second) << 1*ADDRESS_WIDTH);
-    
-    // field J
+    readField(instr, B);
     f >> buf;
-    sym = symbols.find(buf);
-    if (sym == symbols.end())
-      references[buf].emplace_back(code_size, J);
-    else
-      instr |= (uword_t(sym->second) << 0*ADDRESS_WIDTH);
-    
+    readField(instr, J);
     mem[code_size++] = instr;
   }
   
@@ -168,6 +167,21 @@ int main(int argc, char* argv[]) {
         tmp = ref.second;
         f.write((const char*)&tmp, sizeof(uint32_t));
       }
+    }
+    
+    // write number of absolute addresses
+    tmp = absolute.size();
+    f.write((const char*)&tmp, sizeof(uint32_t));
+    
+    // write absolute addresses
+    for (auto& addr : absolute) {
+      // address
+      tmp = addr.first;
+      f.write((const char*)&tmp, sizeof(uint32_t));
+      
+      // field
+      tmp = addr.second;
+      f.write((const char*)&tmp, sizeof(uint32_t));
     }
     
     // write assembled code size
