@@ -32,6 +32,7 @@ const uword_t ADDRESS_WIDTH = uword_t(log2(double(MEM_WORDS)));
 
 fstream f;
 string buf;
+address_t text_offset;
 set<string> exported;
 map<string, address_t> symbols;
 map<string, list<pair<address_t, field_t>>> references;
@@ -75,6 +76,7 @@ int main(int argc, char* argv[]) {
     f >> mem[mem_size++];
   }
   
+  text_offset = mem_size;
   for (f >> buf; !f.eof(); f >> buf) { // reading text section
     if (buf[buf.size() - 1] == ':') { // label found
       symbols[buf.substr(0, buf.size() - 1)] = mem_size;
@@ -128,6 +130,10 @@ int main(int argc, char* argv[]) {
   
   {
     uint32_t tmp;
+    
+    // write text section offset
+    tmp = text_offset;
+    f.write((const char*)&tmp, sizeof(address_t));
     
     // write number of exported symbols
     tmp = exported.size();
