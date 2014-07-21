@@ -132,8 +132,7 @@ int main(int argc, char* argv[]) {
     uint32_t tmp;
     
     // write text section offset
-    tmp = text_offset;
-    f.write((const char*)&tmp, sizeof(address_t));
+    f.write((const char*)&text_offset, sizeof(address_t));
     
     // write number of exported symbols
     tmp = exported.size();
