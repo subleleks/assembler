@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <sstream>
 
 using namespace std;
 
@@ -57,6 +58,45 @@ inline void readField(uword_t& instr, field_t field) {
   }
 }
 
+int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
+inline void readToken() {
+  buf = "";
+  lastTokenLine = currentTokenLine;
+  
+  for (char c = f.get(); f.good(); c = f.get()) {
+    if (c == '/') { // comment found
+      if (buf.size()) { // token was read
+        currentTokenLine = currentLine;
+        return;
+      }
+      // ignoring comment
+      for (c = f.get(); c != '\r' && c != '\n' && f.good(); c = f.get());
+      if (c == '\r') {
+        c = f.get();
+      }
+      currentLine++;
+    }
+    else if (c == '\r' || c == '\n') { // line break found
+      if (buf.size()) { // token was read
+        currentTokenLine = currentLine++;
+        return;
+      }
+      currentLine++;
+    }
+    else if (c == ' ' || c == '\t') { // white space found
+      if (buf.size()) { // token was read
+        currentTokenLine = currentLine;
+        return;
+      }
+    }
+    else { // concatenating the character read
+      buf += c;
+    }
+  }
+  
+  currentTokenLine = currentLine;
+}
+
 int main(int argc, char* argv[]) {
   if (argc != 3) {
     fprintf(stderr, "Usage mode: subleq-asm <assembly_file> <object_file>\n");
@@ -65,34 +105,54 @@ int main(int argc, char* argv[]) {
   
   f.open(argv[1]);
   
-  f >> buf; // reading ".export"
+  readToken(); // reading ".export"
   
-  for (f >> buf; buf != ".data"; f >> buf) { // reading export section
+  for (readToken(); buf != ".data"; readToken()) { // reading export section
     exported.insert(buf);
   }
   
-  for (f >> buf; buf != ".text"; f >> buf) { // reading data section
+  for (readToken(); buf != ".text"; readToken()) { // reading data section
     symbols[buf.substr(0, buf.size() - 1)] = mem_size;
-    f >> mem[mem_size++];
+    readToken();
+    if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
+      sscanf(buf.c_str(), "%lli", &mem[mem_size++]);
+    }
+    else { // for decimal notation
+      stringstream ss;
+      ss << buf;
+      ss >> mem[mem_size++]; 
+    }
   }
   
   text_offset = mem_size;
-  for (f >> buf; !f.eof(); f >> buf) { // reading text section
+  for (readToken(); buf.size();) { // reading text section
     if (buf[buf.size() - 1] == ':') { // label found
       symbols[buf.substr(0, buf.size() - 1)] = mem_size;
       
       if (buf == "start:") // exporting start label
         exported.insert(string("start"));
       
+      readToken();
       continue;
     }
     
     uword_t instr = 0;
     readField(instr, A);
-    f >> buf;
+    readToken();
     readField(instr, B);
-    f >> buf;
-    readField(instr, J);
+    
+    // reading field J
+    readToken();
+    if (currentTokenLine != lastTokenLine) { // the field was omitted
+      instr |= uword_t(mem_size + 1);
+      mem[mem_size++] = instr;
+      continue;
+    }
+    else { // the field was not omitted
+      readField(instr, J);
+    }
+    
+    readToken();
     mem[mem_size++] = instr;
   }
   
