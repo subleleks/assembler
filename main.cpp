@@ -71,12 +71,21 @@ inline void readToken() {
       }
       // ignoring comment
       for (c = f.get(); c != '\r' && c != '\n' && f.good(); c = f.get());
-      if (c == '\r') {
+      if (c == '\r') { // checking for CR or CRLF line endings
         c = f.get();
+        if (f.good() && c != '\n') {
+          f.unget();
+        }
       }
       currentLine++;
     }
     else if (c == '\r' || c == '\n') { // line break found
+      if (c == '\r') { // checking for CR or CRLF line endings
+        c = f.get();
+        if (f.good() && c != '\n') {
+          f.unget();
+        }
+      }
       if (buf.size()) { // token was read
         currentTokenLine = currentLine++;
         return;
@@ -143,12 +152,12 @@ int main(int argc, char* argv[]) {
     
     // reading field J
     readToken();
-    if (currentTokenLine != lastTokenLine) { // the field was omitted
+    if (currentTokenLine != lastTokenLine || !buf.size()) { // field omitted
       instr |= uword_t(mem_size + 1);
       mem[mem_size++] = instr;
       continue;
     }
-    else { // the field was not omitted
+    else { // field specified
       readField(instr, J);
     }
     
