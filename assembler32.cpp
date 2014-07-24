@@ -107,11 +107,13 @@ int assembler32(int argc, char* argv[]) {
   
   readToken(); // reading ".export"
   
-  for (readToken(); buf != ".data"; readToken()) { // reading export section
+  // reading export section
+  for (readToken(); buf != ".data"; readToken()) {
     exported.insert(buf);
   }
   
-  for (readToken(); buf != ".text"; readToken()) { // reading data section
+  // reading data section
+  for (readToken(); buf != ".text"; readToken()) {
     symbols[buf.substr(0, buf.size() - 1)] = mem_size;
     readToken();
     if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
@@ -124,37 +126,30 @@ int assembler32(int argc, char* argv[]) {
     }
   }
   
+  // reading text section
   text_offset = mem_size;
-  for (readToken(); buf.size();) { // reading text section
-    if (buf[buf.size() - 1] == ':') { // symbol found
-      symbols[buf.substr(0, buf.size() - 1)] = mem_size;
-      
-      if (buf == "start:") // exporting start symbol
-        exported.emplace("start");
-      
-      readToken();
-      continue;
-    }
-    
-    // field A
-    mem[mem_size] = parseField();
-    mem_size++;
-    
-    // field B
-    readToken();
-    mem[mem_size] = parseField();
-    mem_size++;
-    
-    // field J
-    readToken();
-    if (currentTokenLine != lastTokenLine || !buf.size()) { // field omitted
+  int field = 0;
+  for (readToken(); buf.size();) {
+    // field 2 omitted
+    if (field == 2 && currentTokenLine != lastTokenLine) {
       mem[mem_size] = mem_size + 1;
+      mem_size++;
+      field = (field + 1)%3;
     }
-    else { // field specified
+    // symbol found
+    else if (buf[buf.size() - 1] == ':') {
+      symbols[buf.substr(0, buf.size() - 1)] = mem_size;
+      if (buf == "start:")
+        exported.emplace("start");
+      readToken();
+    }
+    // field 0, 1, or field 2 specified
+    else {
       mem[mem_size] = parseField();
-      readToken(); // for the next iteration
+      mem_size++;
+      field = (field + 1)%3;
+      readToken();
     }
-    mem_size++;
   }
   
   f.close();
