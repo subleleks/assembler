@@ -23,11 +23,10 @@ typedef uint32_t uword_t;
 
 static fstream f;
 static string buf;
-static uword_t text_offset;
 static set<string> exported;
 static map<string, uword_t> symbols;
 static map<string, set<uword_t>> references;
-static set<uword_t> absolutes;
+static set<uword_t> relatives;
 static uword_t mem_size = 0;
 static uword_t* mem = new uword_t[MEM_WORDS];
 static int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
@@ -83,9 +82,9 @@ inline static uword_t parseField() {
   uword_t field = 0;
   if (buf[0] == '0' && buf[1] == 'x') { // hex notation means absolute address
     sscanf(buf.c_str(), "%i", &field);
-    absolutes.emplace(mem_size);
   }
   else { // symbol means an address that needs to be relocated later
+    relatives.emplace(mem_size);
     auto sym = symbols.find(buf);
     if (sym == symbols.end()) { // symbol not found. leave a reference
       references[buf].emplace(mem_size);
@@ -127,11 +126,11 @@ int assembler32(int argc, char* argv[]) {
   }
   
   // reading text section
-  text_offset = mem_size;
   int field = 0;
   for (readToken(); buf.size();) {
     // field 2 omitted
     if (field == 2 && currentTokenLine != lastTokenLine) {
+      relatives.emplace(mem_size);
       mem[mem_size] = mem_size + 1;
       mem_size++;
       field = (field + 1)%3;
@@ -176,9 +175,6 @@ int assembler32(int argc, char* argv[]) {
   {
     uword_t tmp;
     
-    // write text section offset
-    f.write((const char*)&text_offset, sizeof(uword_t));
-    
     // write number of exported symbols
     tmp = exported.size();
     f.write((const char*)&tmp, sizeof(uword_t));
@@ -213,12 +209,12 @@ int assembler32(int argc, char* argv[]) {
       }
     }
     
-    // write number of absolute addresses
-    tmp = absolutes.size();
+    // write number of relative addresses
+    tmp = relatives.size();
     f.write((const char*)&tmp, sizeof(uword_t));
     
-    // write absolute addresses
-    for (auto addr : absolutes) {
+    // write relative addresses
+    for (auto addr : relatives) {
       tmp = addr;
       f.write((const char*)&tmp, sizeof(uword_t));
     }
