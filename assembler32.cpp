@@ -100,10 +100,9 @@ inline static uword_t parseField() {
     relatives.emplace(mem_size);
     
     // looking for array offset
-    if (buf[buf.size() - 1] == ']') {
-      string offset = buf.substr(buf.find("[") + 1, buf.size());
-      buf = buf.substr(0, buf.find("["));
-      offset = offset.substr(0, offset.find("]"));
+    if (buf.find("+") != buf.npos) {
+      string offset = buf.substr(buf.find("+") + 1, buf.size());
+      buf = buf.substr(0, buf.find("+"));
       stringstream ss;
       ss << offset;
       ss >> field;
