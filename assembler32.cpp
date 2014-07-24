@@ -183,7 +183,7 @@ int assembler32(int argc, char* argv[]) {
   
   f.close();
   
-  // solve references
+  // resolve references
   for (auto map_it = references.begin(); map_it != references.end();) {
     // external symbols
     auto sym = symbols.find(map_it->first);
@@ -192,7 +192,7 @@ int assembler32(int argc, char* argv[]) {
       continue;
     }
     
-    // solve
+    // resolve
     for (auto it = map_it->second.begin(); it != map_it->second.end(); ++it) {
       mem[*it] += sym->second;
     }
