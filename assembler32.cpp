@@ -125,23 +125,22 @@ int assembler32(int argc, char* argv[]) {
   }
   
   // reading data section
-  for (readToken(); buf != ".text"; readToken()) {
+  for (readToken(); buf != ".text";) {
     symbols[buf.substr(0, buf.size() - 1)] = mem_size;
     readToken();
     if (buf == ".array") { // uninitialized array
       readToken();
       mem_size += parseData();
+      readToken(); // next label
     }
     else if (buf == ".iarray") { // initialized array
-      readToken();
-      uword_t array_size = parseData();
-      for (uword_t i = 0; i < array_size; i++) {
-        readToken();
+      for (readToken(); currentTokenLine == lastTokenLine; readToken()) {
         mem[mem_size++] = parseData();
       }
     }
     else { // initialized word
       mem[mem_size++] = parseData();
+      readToken(); // next label
     }
   }
   
