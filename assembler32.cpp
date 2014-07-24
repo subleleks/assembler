@@ -149,6 +149,7 @@ int assembler32(int argc, char* argv[]) {
       }
     }
     else if (buf == ".ptr") { // pointer
+      readToken();
       mem[mem_size] = parseField();
       mem_size++;
       readToken(); // next symbol
