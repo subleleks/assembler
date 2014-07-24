@@ -27,7 +27,7 @@ static uword_t text_offset;
 static set<string> exported;
 static map<string, uword_t> symbols;
 static map<string, set<uword_t>> references;
-static set<uword_t> absolute;
+static set<uword_t> absolutes;
 static uword_t mem_size = 0;
 static uword_t* mem = new uword_t[MEM_WORDS];
 static int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
@@ -83,7 +83,7 @@ inline static uword_t parseField() {
   uword_t field = 0;
   if (buf[0] == '0' && buf[1] == 'x') { // hex notation means absolute address
     sscanf(buf.c_str(), "%i", &field);
-    absolute.emplace(mem_size);
+    absolutes.emplace(mem_size);
   }
   else { // symbol means an address that needs to be relocated later
     auto sym = symbols.find(buf);
@@ -214,11 +214,11 @@ int assembler32(int argc, char* argv[]) {
     }
     
     // write number of absolute addresses
-    tmp = absolute.size();
+    tmp = absolutes.size();
     f.write((const char*)&tmp, sizeof(uword_t));
     
     // write absolute addresses
-    for (auto& addr : absolute) {
+    for (auto& addr : absolutes) {
       tmp = addr;
       f.write((const char*)&tmp, sizeof(uword_t));
     }
