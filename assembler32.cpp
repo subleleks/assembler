@@ -98,6 +98,17 @@ inline static uword_t parseField() {
   }
   else { // symbol means an address that needs to be relocated later
     relatives.emplace(mem_size);
+    
+    // looking for array offset
+    if (buf[buf.size() - 1] == ']') {
+      string offset = buf.substr(buf.find("[") + 1, buf.size());
+      buf = buf.substr(0, buf.find("["));
+      offset = offset.substr(0, offset.find("]"));
+      stringstream ss;
+      ss << offset;
+      ss >> field;
+    }
+    
     auto sym = symbols.find(buf);
     if (sym == symbols.end()) { // symbol not found. leave a reference
       references[buf].emplace(mem_size);
@@ -183,7 +194,7 @@ int assembler32(int argc, char* argv[]) {
     
     // solve
     for (auto it = map_it->second.begin(); it != map_it->second.end(); ++it) {
-      mem[*it] = sym->second;
+      mem[*it] += sym->second;
     }
     
     references.erase(map_it++);
