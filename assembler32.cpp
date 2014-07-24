@@ -131,7 +131,7 @@ int assembler32(int argc, char* argv[]) {
     if (buf == ".array") { // uninitialized array
       readToken();
       mem_size += parseData();
-      readToken(); // next label
+      readToken(); // next symbol
     }
     else if (buf == ".iarray") { // initialized array
       for (readToken(); currentTokenLine == lastTokenLine; readToken()) {
@@ -140,7 +140,7 @@ int assembler32(int argc, char* argv[]) {
     }
     else { // initialized word
       mem[mem_size++] = parseData();
-      readToken(); // next label
+      readToken(); // next symbol
     }
   }
   
