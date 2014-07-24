@@ -78,6 +78,19 @@ inline static void readToken() {
   currentTokenLine = currentLine;
 }
 
+inline static uword_t parseData() {
+  uword_t data = 0;
+  if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
+    sscanf(buf.c_str(), "%i", &data);
+  }
+  else { // for decimal notation
+    stringstream ss;
+    ss << buf;
+    ss >> data; 
+  }
+  return data;
+}
+
 inline static uword_t parseField() {
   uword_t field = 0;
   if (buf[0] == '0' && buf[1] == 'x') { // hex notation means absolute address
@@ -115,13 +128,20 @@ int assembler32(int argc, char* argv[]) {
   for (readToken(); buf != ".text"; readToken()) {
     symbols[buf.substr(0, buf.size() - 1)] = mem_size;
     readToken();
-    if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
-      sscanf(buf.c_str(), "%i", &mem[mem_size++]);
+    if (buf == ".array") { // uninitialized array
+      readToken();
+      mem_size += parseData();
     }
-    else { // for decimal notation
-      stringstream ss;
-      ss << buf;
-      ss >> mem[mem_size++]; 
+    else if (buf == ".iarray") { // initialized array
+      readToken();
+      uword_t array_size = parseData();
+      for (uword_t i = 0; i < array_size; i++) {
+        readToken();
+        mem[mem_size++] = parseData();
+      }
+    }
+    else { // initialized word
+      mem[mem_size++] = parseData();
     }
   }
   
