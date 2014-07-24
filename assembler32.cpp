@@ -207,7 +207,7 @@ int assembler32(int argc, char* argv[]) {
       f.write((const char*)&tmp, sizeof(uword_t));
       
       // write references to current symbol
-      for (auto& ref : sym.second) {
+      for (auto ref : sym.second) {
         tmp = ref;
         f.write((const char*)&tmp, sizeof(uword_t));
       }
@@ -218,7 +218,7 @@ int assembler32(int argc, char* argv[]) {
     f.write((const char*)&tmp, sizeof(uword_t));
     
     // write absolute addresses
-    for (auto& addr : absolutes) {
+    for (auto addr : absolutes) {
       tmp = addr;
       f.write((const char*)&tmp, sizeof(uword_t));
     }
