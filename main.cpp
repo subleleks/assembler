@@ -37,7 +37,7 @@ static string buf;
 /// on the linker.
 static set<string> exported;
 
-/// All current symbols of this file.
+/// All current symbols declared on this file.
 /// Maps from a label to it's address in memory.
 static map<string, uword_t> symbols;
 
@@ -294,21 +294,35 @@ int main(int argc, char* argv[]) {
 
   f.close();
 
-  // resolve references
-  for (auto map_it = references.begin(); map_it != references.end();) {
-    // external symbols
-    auto sym = symbols.find(map_it->first);
-    if (sym == symbols.end()) {
-      ++map_it;
+  // Now we go through each symbol (label), resolving references.
+  //
+  // If it's not on this file (`symbols` map), we assume it's
+  // found on other file (`references` map).
+  //
+  for (auto map_it = references.begin(); map_it != references.end(); ++map_it) {
+
+    // Which symbol was referenced
+    string symbol_name = map_it->first;
+
+    // All addresses where the symbol above was referenced
+    set<uword_t> symbol_called = map_it->second;
+
+    // Is this symbol declared on this file?
+    // If not then leave it be at `references`
+    auto sym = symbols.find(symbol_name);
+
+    if (sym == symbols.end())
       continue;
-    }
 
-    // resolve
-    for (auto it = map_it->second.begin(); it != map_it->second.end(); ++it) {
-      mem[*it] += sym->second;
-    }
+    // If it's on this file, we replace it's address on every
+    // memory location that called it
+    uword_t symbol_address = sym->second;
 
-    references.erase(map_it++);
+    for (auto it = symbol_called.begin(); it != symbol_called.end(); ++it)
+      mem[*it] += symbol_address;
+
+    // And remove it from the external reference map
+    references.erase(map_it);
   }
 
   f.open(argv[2], fstream::out | fstream::binary);
