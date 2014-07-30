@@ -1,9 +1,13 @@
-/*
- * main.cpp
+/**
+ * SUBLEQ Assembly: main.cpp
  *
  *  Created on: Apr 9, 2014
- *      Author: Pimenta
- *      Colaborator: Alexandre Dantas
+ *      Author:       Pimenta
+ *      Collaborator: Alexandre Dantas
+ *
+ * This program reads a SUBLEQ Assembly file and outputs
+ * a well-formed object file.
+ * It's supposed to be fed to the Linker.
  */
 
 #include <cstdint>
@@ -28,12 +32,44 @@ static fstream f;
 /// when reading the file.
 static string buf;
 
+/// Set of all exported symbols.
+/// They're used together with other object files
+/// on the linker.
 static set<string> exported;
+
+/// All current symbols of this file.
+/// Maps from a label to it's address in memory.
 static map<string, uword_t> symbols;
+
+/// Contains all symbols not found on this file.
+///
+/// It has labels supposed to be found on other
+/// Assembly files.
+/// They'll get resolved with the external symbols.
 static map<string, set<uword_t>> references;
+
+/// Relative addresses found on this file.
+///
+/// When you "call" a symbol on this file, it's address
+/// is relative to the start of this file.
+///
+/// When the Linker joins several object files, it will
+/// use the values on this set to relocate them all.
+///
 static set<uword_t> relatives;
+
+/// Current size of the memory.
+/// While parsing: points the current memory address
+///                being read.
+/// At the end:    has the entire size of the memory
+///                read.
 static uword_t mem_size = 0;
+
+/// Raw memory.
+/// It contains the assembled memory that will get
+/// written at the end of the object file.
 static uword_t* mem = new uword_t[MEM_WORDS];
+
 static int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
 
 /// Reads a token (separated by whitespaces) from the file,
@@ -107,6 +143,10 @@ inline static void readToken() {
   currentTokenLine = currentLine;
 }
 
+/// Returns text on `buf` as data.
+///
+/// Converts textual data to words.
+/// For example, converts "0x1" to 1.
 inline static uword_t parseData() {
   uword_t data = 0;
   if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
@@ -120,12 +160,32 @@ inline static uword_t parseData() {
   return data;
 }
 
+/// Parses a single field contained on `buf`.
+///
+/// So for `SUBLEQ A B C` we call this function three times,
+/// once for each field A, B and C.
+///
+/// Returns the address being "called" by the field.
+///
+/// For example, if we have:
+///
+///     .data
+///         one: 1
+///     .text
+///       loop:
+///         one one loop
+///
+/// For `one` on `loop:` it returns 0, since it's the
+/// address of the thing being "called" by the instruction.
+///
 inline static uword_t parseField() {
   uword_t field = 0;
-  if (buf[0] == '0' && buf[1] == 'x') { // hex notation means absolute address
+  // hex notation means absolute address
+  if (buf[0] == '0' && buf[1] == 'x') {
     sscanf(buf.c_str(), "%i", &field);
   }
-  else { // symbol means an address that needs to be relocated later
+  // symbol means an address that needs to be relocated later
+  else {
     relatives.emplace(mem_size);
 
     // looking for array offset
@@ -138,10 +198,12 @@ inline static uword_t parseField() {
     }
 
     auto sym = symbols.find(buf);
-    if (sym == symbols.end()) { // symbol not found. leave a reference
+    // symbol not found. leave a reference
+    if (sym == symbols.end()) {
       references[buf].emplace(mem_size);
     }
-    else { // symbol found. the field is the address of the symbol
+    // symbol found. the field is the address of the symbol
+    else {
       field = sym->second;
     }
   }
