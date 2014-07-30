@@ -273,19 +273,12 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  // Making sure both files exist
   fstream input_file(argv[1]);
-  fstream output_file(argv[2], fstream::out | fstream::binary);
 
   if (!input_file) {
     cout << "Input file '" << argv[1] << "' doesn't exist" << endl;
     return EXIT_FAILURE;
   }
-  if (!output_file) {
-    cout << "Output file '" << argv[2] << "' doesn't exist" << endl;
-    return EXIT_FAILURE;
-  }
-
 
   // Read the whole file and store on a buffer.
   //
@@ -393,6 +386,13 @@ int main(int argc, char* argv[]) {
   }
 
   // Now, outputting the binary stuff
+  fstream output_file(argv[2], fstream::out | fstream::binary);
+
+  if (!output_file) {
+    cout << "Couldn't write to file '" << argv[2] << "'" << endl;
+    return EXIT_FAILURE;
+  }
+
   {
     uword_t tmp;
 
