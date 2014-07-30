@@ -92,8 +92,7 @@
     tmpc inc multLoop # goto multLoop;
   loopC:
     # max = tmpc;
-    max max
-    tmpc zero
+    max max ; tmpc zero
     zero max
     zero zero
 

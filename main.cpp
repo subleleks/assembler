@@ -192,6 +192,17 @@ inline static void readToken() {
       continue;
     }
 
+    // delimiter found
+    if (c == ';') {
+
+      // token was read
+      if (buf.size()) {
+        currentTokenLine = currentLine;
+        return;
+      }
+      continue;
+    }
+
     // this character was none of the above
     // simply appending it
     buf += c;
