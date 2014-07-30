@@ -28,8 +28,8 @@ typedef uint32_t uword_t;
 
 static fstream f;
 
-/// Global buffer that will hold the current line
-/// when reading the file.
+/// Global buffer that always contains the current
+/// token being read by `readToken`
 static string buf;
 
 /// Set of all exported symbols.
@@ -78,7 +78,20 @@ inline static void readToken() {
   buf = "";
   lastTokenLine = currentTokenLine;
 
-  for (char c = f.get(); f.good(); c = f.get()) {
+  // Will read all chars until:
+  //
+  // - Finding a whitespace (or tab)
+  // - Finding a comment
+  // - Finding an end-of-line
+  // - File somehow ends
+  //
+  while (true)
+  {
+    char c = f.get();
+
+    if (!f.good())
+	    break;
+
     // comment found
     if (c == '/') {
 
@@ -89,14 +102,16 @@ inline static void readToken() {
       }
 
       // ignoring entire comment
-      for (c = f.get(); c != '\r' && c != '\n' && f.good(); c = f.get());
+      do {
+        c = f.get();
+      } while (c != '\r' && c != '\n' && f.good());
 
       // checking for CR or CRLF line endings
       if (c == '\r') {
         c = f.get();
-        if (f.good() && c != '\n') {
+
+        if (f.good() && c != '\n')
           f.unget();
-        }
       }
 
       currentLine++;
@@ -109,9 +124,9 @@ inline static void readToken() {
       // checking for CR or CRLF line endings
       if (c == '\r') {
         c = f.get();
-        if (f.good() && c != '\n') {
+
+        if (f.good() && c != '\n')
           f.unget();
-        }
       }
 
       // token was read
