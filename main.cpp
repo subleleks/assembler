@@ -17,6 +17,7 @@
 #include <set>
 #include <string>
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -26,7 +27,9 @@ typedef uint32_t uword_t;
 #define MEM_WORDS 0x2000
 #endif
 
-static fstream f;
+/// Buffer that contains the entire contents
+/// of the input file, with normalized line endings.
+static stringstream f;
 
 /// Global buffer that always contains the current
 /// token being read by `readToken`
@@ -286,7 +289,34 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  f.open(argv[1]);
+  // Making sure both files exist
+  fstream input_file(argv[1]);
+  fstream output_file(argv[2], fstream::out | fstream::binary);
+
+  if (!input_file) {
+    cout << "Input file '" << argv[1] << "' doesn't exist" << endl;
+    return EXIT_FAILURE;
+  }
+  if (!output_file) {
+    cout << "Output file '" << argv[2] << "' doesn't exist" << endl;
+    return EXIT_FAILURE;
+  }
+
+
+  // Read the whole file and store on a buffer.
+  //
+  // This way we won't need to worry about specific
+  // line-endings, since it will look like it only
+  // has '\n'.
+  while (true) {
+    string str;
+    safeGetline(input_file, str);
+    f << (str + '\n');
+
+    if (!input_file)
+      break;
+  }
+  input_file.close();
 
   readToken(); // reading ".export"
 
@@ -347,8 +377,6 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  f.close();
-
   // Now we go through each symbol (label), resolving references.
   //
   // If it's not on this file (`symbols` map), we assume it's
@@ -380,63 +408,62 @@ int main(int argc, char* argv[]) {
     references.erase(map_it);
   }
 
-  f.open(argv[2], fstream::out | fstream::binary);
-
+  // Now, outputting the binary stuff
   {
     uword_t tmp;
 
     // write number of exported symbols
     tmp = exported.size();
-    f.write((const char*)&tmp, sizeof(uword_t));
+    output_file.write((const char*)&tmp, sizeof(uword_t));
 
     // write exported symbols
     for (auto& exp : exported) {
       // string
-      f.write(exp.c_str(), exp.size() + 1);
+      output_file.write(exp.c_str(), exp.size() + 1);
 
       // address
       tmp = symbols[exp];
-      f.write((const char*)&tmp, sizeof(uword_t));
+      output_file.write((const char*)&tmp, sizeof(uword_t));
     }
 
     // write number of symbols of pending references
     tmp = references.size();
-    f.write((const char*)&tmp, sizeof(uword_t));
+    output_file.write((const char*)&tmp, sizeof(uword_t));
 
     // write symbols of pending references
     for (auto& sym : references) {
       // string
-      f.write(sym.first.c_str(), sym.first.size() + 1);
+      output_file.write(sym.first.c_str(), sym.first.size() + 1);
 
       // write number of references to current symbol
       tmp = sym.second.size();
-      f.write((const char*)&tmp, sizeof(uword_t));
+      output_file.write((const char*)&tmp, sizeof(uword_t));
 
       // write references to current symbol
       for (auto ref : sym.second) {
         tmp = ref;
-        f.write((const char*)&tmp, sizeof(uword_t));
+        output_file.write((const char*)&tmp, sizeof(uword_t));
       }
     }
 
     // write number of relative addresses
     tmp = relatives.size();
-    f.write((const char*)&tmp, sizeof(uword_t));
+    output_file.write((const char*)&tmp, sizeof(uword_t));
 
     // write relative addresses
     for (auto addr : relatives) {
       tmp = addr;
-      f.write((const char*)&tmp, sizeof(uword_t));
+      output_file.write((const char*)&tmp, sizeof(uword_t));
     }
 
     // write assembled code size
-    f.write((const char*)&mem_size, sizeof(uword_t));
+    output_file.write((const char*)&mem_size, sizeof(uword_t));
 
     // write assembled code
-    f.write((const char*)mem, sizeof(uword_t)*mem_size);
+    output_file.write((const char*)mem, sizeof(uword_t)*mem_size);
   }
 
-  f.close();
+  output_file.close();
 
   delete[] mem;
 
