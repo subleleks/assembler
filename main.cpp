@@ -75,6 +75,11 @@ static uword_t* mem = new uword_t[MEM_WORDS];
 
 static int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
 
+/// Flag for the `readToken()` function.
+/// Tells we've finished reading all the tokens for
+/// the previous instruction and are at a new one.
+static bool new_instruction = false;
+
 /// Reads a string from `is` to the end-of-line, saving it on `t`.
 ///
 /// @note It doesn't save the end-of-line character on `t`.
@@ -133,8 +138,9 @@ std::istream& safeGetline(std::istream& is, std::string& t)
 /// Reads a token (separated by whitespaces) from the file,
 /// char by char, putting on `buf`
 inline static void readToken() {
-  buf.clear();
 
+  new_instruction = false;
+  buf.clear();
   lastTokenLine = currentTokenLine;
 
   // Will read all chars until:
@@ -199,8 +205,15 @@ inline static void readToken() {
       // token was read
       if (buf.size()) {
         currentTokenLine = currentLine;
+
+        // Special case, I need this if
+        // there's two tokens with ';'
+        // and no space between them
+        // "like;this"
+        f.unget();
         return;
       }
+      new_instruction = true;
       continue;
     }
 
@@ -350,8 +363,11 @@ int main(int argc, char* argv[]) {
 
   while (! buf.empty()) {
 
+    if (currentTokenLine != lastTokenLine)
+      new_instruction = true;
+
     // field 2 omitted
-    if (field == 2 && currentTokenLine != lastTokenLine) {
+    if (field == 2 && new_instruction) {
       relatives.emplace(mem_size);
       mem[mem_size] = mem_size + 1;
       mem_size++;
@@ -359,9 +375,13 @@ int main(int argc, char* argv[]) {
     }
     // symbol found
     else if (buf.back() == ':') {
-      symbols[buf.substr(0, buf.size() - 1)] = mem_size;
-      if (buf == "start:")
+      buf.pop_back();
+
+      symbols[buf] = mem_size;
+
+      if (buf == "start")
         exported.emplace("start");
+
       readToken();
     }
     // field 0, 1, or field 2 specified
