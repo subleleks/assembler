@@ -133,7 +133,8 @@ std::istream& safeGetline(std::istream& is, std::string& t)
 /// Reads a token (separated by whitespaces) from the file,
 /// char by char, putting on `buf`
 inline static void readToken() {
-  buf = "";
+  buf.clear();
+
   lastTokenLine = currentTokenLine;
 
   // Will read all chars until:
@@ -339,9 +340,16 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // reading text section
+  // Reading text section
+
+  // Count of current instruction field.
+  // For example, `A B C` will have
+  // field 1 for A, 2 for B and 3 for C
   int field = 0;
-  for (readToken(); buf.size();) {
+  readToken();
+
+  while (! buf.empty()) {
+
     // field 2 omitted
     if (field == 2 && currentTokenLine != lastTokenLine) {
       relatives.emplace(mem_size);
@@ -350,7 +358,7 @@ int main(int argc, char* argv[]) {
       field = (field + 1)%3;
     }
     // symbol found
-    else if (buf[buf.size() - 1] == ':') {
+    else if (buf.back() == ':') {
       symbols[buf.substr(0, buf.size() - 1)] = mem_size;
       if (buf == "start:")
         exported.emplace("start");
