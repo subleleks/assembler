@@ -151,7 +151,7 @@ inline static void readToken() {
       break;
 
     // comment found
-    if (c == '/') {
+    if (c == '#') {
 
       // token was read
       if (buf.size()) {
