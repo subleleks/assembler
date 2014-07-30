@@ -162,30 +162,14 @@ inline static void readToken() {
       // ignoring entire comment
       do {
         c = f.get();
-      } while (c != '\r' && c != '\n' && f.good());
-
-      // checking for CR or CRLF line endings
-      if (c == '\r') {
-        c = f.get();
-
-        if (f.good() && c != '\n')
-          f.unget();
-      }
+      } while (c != '\n' && f.good());
 
       currentLine++;
       continue;
     }
 
     // line break found
-    if (c == '\r' || c == '\n') {
-
-      // checking for CR or CRLF line endings
-      if (c == '\r') {
-        c = f.get();
-
-        if (f.good() && c != '\n')
-          f.unget();
-      }
+    if (c == '\n') {
 
       // token was read
       if (buf.size()) {
