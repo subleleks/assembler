@@ -2,12 +2,12 @@
 #
 # Tests for our awesome SUBLEQ assembler.
 
-TEMP_FILE=/tmp/thing.obj
+TEMP_FILE="/tmp/thing.obj"
 
 function test() {
 	./subleq-asm "$1.asm" "$TEMP_FILE"
 
-	diff "$1.obj" "$TEMP_FILE" 1>&2 2>/dev/null
+	diff "$1.obj" "$TEMP_FILE" >/dev/null 2>&1
 
 	if [ "$?" -eq 0 ]
 	then
@@ -17,10 +17,6 @@ function test() {
 	fi
 }
 
-echo "[MAKE]"
-make
-
-echo "[TEST]"
 for file in tests/*.asm
 do
 	FILENAME=`echo $file | sed 's|\(.*\)\.asm|\1|'`
