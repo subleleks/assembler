@@ -195,7 +195,7 @@ struct ObjectCode {
     
     af.close();
     
-    resolve_references();
+    resolveReferences();
   }
   
   ~ObjectCode() {
@@ -217,7 +217,7 @@ struct ObjectCode {
     mem[mem_size++] = field.word;
   }
   
-  void resolve_references() {
+  void resolveReferences() {
     for (auto map_it = references.begin(); map_it != references.end();) {
       // external symbols
       auto sym = symbols.find(map_it->first);
