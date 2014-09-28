@@ -1,13 +1,8 @@
-/**
- * SUBLEQ Assembly: main.cpp
+/*
+ * main.cpp
  *
  *  Created on: Apr 9, 2014
- *      Author:       Pimenta
- *      Collaborator: Alexandre Dantas
- *
- * This program reads a SUBLEQ Assembly file and outputs
- * a well-formed object file.
- * It's supposed to be fed to the Linker.
+ *      Author: Pimenta
  */
 
 #include <cstdint>
@@ -17,7 +12,6 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <iostream>
 
 using namespace std;
 
@@ -27,265 +21,105 @@ typedef uint32_t uword_t;
 #define MEM_WORDS 0x2000
 #endif
 
-/// Buffer that contains the entire contents
-/// of the input file, with normalized line endings.
-static stringstream f;
+struct SourceFile {
+  fstream f;
+  int currentLine, lastTokenLine, currentTokenLine;
+  SourceFile(const string& fn) :
+  currentLine(1), lastTokenLine(1), currentTokenLine(1) {
+    
+  }
+  string readToken() {
+    string token = "";
+    lastTokenLine = currentTokenLine;
+    
+    for (char c = f.get(); f.good(); c = f.get()) {
+      if (c == '/') { // comment found
+        if (token.size()) { // token was read
+          break;
+        }
+        // ignoring comment
+        for (c = f.get(); c != '\r' && c != '\n' && f.good(); c = f.get());
+        if (c == '\r') { // checking for CR or CRLF line endings
+          c = f.get();
+          if (f.good() && c != '\n') {
+            f.unget();
+          }
+        }
+        currentLine++;
+      }
+      else if (c == '\r' || c == '\n') { // line break found
+        if (c == '\r') { // checking for CR or CRLF line endings
+          c = f.get();
+          if (f.good() && c != '\n') {
+            f.unget();
+          }
+        }
+        if (token.size()) { // token was read
+          currentTokenLine = currentLine++;
+          return token;
+        }
+        currentLine++;
+      }
+      else if (c == ' ' || c == '\t') { // white space found
+        if (token.size()) { // token was read
+          return token;
+        }
+      }
+      else { // concatenating the character read
+        token += c;
+      }
+    }
+    
+    currentTokenLine = currentLine;
+    return token;
+  }
+  void close() {
+    f.close();
+  }
+};
 
-/// Global buffer that always contains the current
-/// token being read by `readToken`
-static string buf;
-
-/// Set of all exported symbols.
-/// They're used together with other object files
-/// on the linker.
 static set<string> exported;
-
-/// All current symbols declared on this file.
-/// Maps from a label to it's address in memory.
 static map<string, uword_t> symbols;
-
-/// Contains all symbols not found on this file.
-///
-/// It has labels supposed to be found on other
-/// Assembly files.
-/// They'll get resolved with the external symbols.
 static map<string, set<uword_t>> references;
-
-/// Relative addresses found on this file.
-///
-/// When you "call" a symbol on this file, it's address
-/// is relative to the start of this file.
-///
-/// When the Linker joins several object files, it will
-/// use the values on this set to relocate them all.
-///
 static set<uword_t> relatives;
-
-/// Current size of the memory.
-/// While parsing: points the current memory address
-///                being read.
-/// At the end:    has the entire size of the memory
-///                read.
 static uword_t mem_size = 0;
-
-/// Raw memory.
-/// It contains the assembled memory that will get
-/// written at the end of the object file.
 static uword_t* mem = new uword_t[MEM_WORDS];
 
-static int currentLine = 1, lastTokenLine = 1, currentTokenLine = 1;
-
-/// Flag for the `readToken()` function.
-/// Tells we've finished reading all the tokens for
-/// the previous instruction and are at a new one.
-static bool new_instruction = false;
-
-/// Reads a string from `is` to the end-of-line, saving it on `t`.
-///
-/// @note It doesn't save the end-of-line character on `t`.
-///
-/// This is a "safe" implementation of `std::getline`.
-/// It is "safe" in the sense that it does work with all possible
-/// line endings ("\r", "\n" and "\r\n").
-///
-/// Taken straight from StackOverflow. Source:
-/// http://stackoverflow.com/a/6089413
-///
-std::istream& safeGetline(std::istream& is, std::string& t)
-{
-  t.clear();
-
-  // The characters in the stream are read one-by-one using a
-  // std::streambuf. That is faster than reading them one-by-one
-  // using the std::istream.
-  //
-  // Code that uses streambuf this way must be guarded by a sentry
-  // object.
-  // The sentry object performs various tasks, such as thread
-  // synchronization and updating the stream state.
-
-  std::istream::sentry se(is, true);
-
-  std::streambuf* sb = is.rdbuf();
-
-  while (true) {
-    int c = sb->sbumpc();
-
-    switch (c) {
-
-    case '\n':
-      return is;
-
-    case '\r':
-      if (sb->sgetc() == '\n')
-        sb->sbumpc();
-
-      return is;
-
-    case EOF:
-      // Also handle the case when the last line has no line ending
-      if (t.empty())
-        is.setstate(std::ios::eofbit);
-
-      return is;
-
-    default:
-      t += (char)c;
-    }
-  }
-}
-
-/// Reads a token (separated by whitespaces) from the file,
-/// char by char, putting on `buf`
-inline static void readToken() {
-
-  new_instruction = false;
-  buf.clear();
-  lastTokenLine = currentTokenLine;
-
-  // Will read all chars until:
-  //
-  // - Finding a whitespace (or tab)
-  // - Finding a comment
-  // - Finding an end-of-line
-  // - File somehow ends
-  //
-  while (true)
-  {
-    char c = f.get();
-
-    if (!f.good())
-      break;
-
-    // comment found
-    if (c == '#') {
-
-      // token was read
-      if (buf.size()) {
-        currentTokenLine = currentLine;
-        return;
-      }
-
-      // ignoring entire comment
-      do {
-        c = f.get();
-      } while (c != '\n' && f.good());
-
-      currentLine++;
-      continue;
-    }
-
-    // line break found
-    if (c == '\n') {
-
-      // token was read
-      if (buf.size()) {
-        currentTokenLine = currentLine++;
-        return;
-      }
-
-      currentLine++;
-      continue;
-    }
-
-    // white space found
-    if (c == ' ' || c == '\t') {
-
-      // token was read
-      if (buf.size()) {
-        currentTokenLine = currentLine;
-        return;
-      }
-      continue;
-    }
-
-    // delimiter found
-    if (c == ';') {
-
-      // token was read
-      if (buf.size()) {
-        currentTokenLine = currentLine;
-
-        // Special case, I need this if
-        // there's two tokens with ';'
-        // and no space between them
-        // "like;this"
-        f.unget();
-        return;
-      }
-      new_instruction = true;
-      continue;
-    }
-
-    // this character was none of the above
-    // simply appending it
-    buf += c;
-  }
-
-  currentTokenLine = currentLine;
-}
-
-/// Returns text on `buf` as data.
-///
-/// Converts textual data to words.
-/// For example, converts "0x1" to 1.
-inline static uword_t parseData() {
+inline static uword_t parseData(const string& token) {
   uword_t data = 0;
-  if (buf[0] == '0' && buf[1] == 'x') { // for hex notation
-    sscanf(buf.c_str(), "%i", &data);
+  if (token[0] == '0' && token[1] == 'x') { // for hex notation
+    sscanf(token.c_str(), "%i", &data);
   }
   else { // for decimal notation
     stringstream ss;
-    ss << buf;
-    ss >> data;
+    ss << token;
+    ss >> data; 
   }
   return data;
 }
 
-/// Parses a single field contained on `buf`.
-///
-/// So for `SUBLEQ A B C` we call this function three times,
-/// once for each field A, B and C.
-///
-/// Returns the address being "called" by the field.
-///
-/// For example, if we have:
-///
-///     .data
-///         one: 1
-///     .text
-///       loop:
-///         one one loop
-///
-/// For `one` on `loop:` it returns 0, since it's the
-/// address of the thing being "called" by the instruction.
-///
-inline static uword_t parseField() {
+inline static uword_t parseField(string token) {
   uword_t field = 0;
-  // hex notation means absolute address
-  if (buf[0] == '0' && buf[1] == 'x') {
-    sscanf(buf.c_str(), "%i", &field);
+  if (token[0] == '0' && token[1] == 'x') { // hex means absolute address
+    sscanf(token.c_str(), "%i", &field);
   }
-  // symbol means an address that needs to be relocated later
-  else {
+  else { // symbol means an address that needs to be relocated later
     relatives.emplace(mem_size);
-
+    
     // looking for array offset
-    if (buf.find("+") != buf.npos) {
-      string offset = buf.substr(buf.find("+") + 1, buf.size());
-      buf = buf.substr(0, buf.find("+"));
+    if (token.find("+") != string::npos) {
+      string offset = token.substr(token.find("+") + 1, token.size());
+      token = token.substr(0, token.find("+"));
       stringstream ss;
       ss << offset;
       ss >> field;
     }
-
-    auto sym = symbols.find(buf);
-    // symbol not found. leave a reference
-    if (sym == symbols.end()) {
-      references[buf].emplace(mem_size);
+    
+    auto sym = symbols.find(token);
+    if (sym == symbols.end()) { // symbol not found. leave a reference
+      references[token].emplace(mem_size);
     }
-    // symbol found. the field is the address of the symbol
-    else {
+    else { // symbol found. the field is the address of the symbol
       field = sym->second;
     }
   }
@@ -297,198 +131,154 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Usage mode: subleq-asm <assembly_file> <object_file>\n");
     return 0;
   }
-
-  fstream input_file(argv[1]);
-
-  if (!input_file) {
-    cout << "Input file '" << argv[1] << "' doesn't exist" << endl;
-    return EXIT_FAILURE;
-  }
-
-  // Read the whole file and store on a buffer.
-  //
-  // This way we won't need to worry about specific
-  // line-endings, since it will look like it only
-  // has '\n'.
-  while (true) {
-    string str;
-    safeGetline(input_file, str);
-    f << (str + '\n');
-
-    if (!input_file)
-      break;
-  }
-  input_file.close();
-
-  readToken(); // reading ".export"
-
+  
+  SourceFile sf(argv[1]);
+  
+  sf.readToken(); // reading ".export"
+  
   // reading export section
-  for (readToken(); buf != ".data"; readToken()) {
-    exported.insert(buf);
+  for (
+    string token = sf.readToken();
+    token != ".data";
+    token = sf.readToken()
+  ) {
+    exported.insert(token);
   }
-
+  
   // reading data section
-  for (readToken(); buf != ".text";) {
-    symbols[buf.substr(0, buf.size() - 1)] = mem_size;
-    readToken();
-    if (buf == ".array") { // uninitialized array
-      readToken();
-      mem_size += parseData();
-      readToken(); // next symbol
+  for (string token = sf.readToken(); token != ".text";) {
+    symbols[token.substr(0, token.size() - 1)] = mem_size;
+    token = sf.readToken();
+    if (token == ".array") { // uninitialized array
+      token = sf.readToken();
+      mem_size += parseData(token);
+      token = sf.readToken(); // next symbol
     }
-    else if (buf == ".iarray") { // initialized array
-      for (readToken(); currentTokenLine == lastTokenLine; readToken()) {
-        mem[mem_size++] = parseData();
+    else if (token == ".iarray") { // initialized array
+      for (
+        token = sf.readToken();
+        sf.currentTokenLine == sf.lastTokenLine;
+        token = sf.readToken()
+      ) {
+        mem[mem_size++] = parseData(token);
       }
     }
-    else if (buf == ".ptr") { // pointer
-      readToken();
-      mem[mem_size] = parseField();
+    else if (token == ".ptr") { // pointer
+      token = sf.readToken();
+      mem[mem_size] = parseField(token);
       mem_size++;
-      readToken(); // next symbol
+      token = sf.readToken(); // next symbol
     }
     else { // initialized word
-      mem[mem_size++] = parseData();
-      readToken(); // next symbol
+      mem[mem_size++] = parseData(token);
+      token = sf.readToken(); // next symbol
     }
   }
-
-  // Reading text section
-
-  // Count of current instruction field.
-  // For example, `A B C` will have
-  // field 1 for A, 2 for B and 3 for C
+  
+  // reading text section
   int field = 0;
-  readToken();
-
-  while (! buf.empty()) {
-
-    if (currentTokenLine != lastTokenLine)
-      new_instruction = true;
-
+  for (string token = sf.readToken(); token.size();) {
     // field 2 omitted
-    if (field == 2 && new_instruction) {
+    if (field == 2 && sf.currentTokenLine != sf.lastTokenLine) {
       relatives.emplace(mem_size);
       mem[mem_size] = mem_size + 1;
       mem_size++;
       field = (field + 1)%3;
     }
     // symbol found
-    else if (buf.back() == ':') {
-      buf.pop_back();
-
-      symbols[buf] = mem_size;
-
-      if (buf == "start")
+    else if (token[token.size() - 1] == ':') {
+      symbols[token.substr(0, token.size() - 1)] = mem_size;
+      if (token == "start:")
         exported.emplace("start");
-
-      readToken();
+      token = sf.readToken();
     }
     // field 0, 1, or field 2 specified
     else {
-      mem[mem_size] = parseField();
+      mem[mem_size] = parseField(token);
       mem_size++;
       field = (field + 1)%3;
-      readToken();
+      token = sf.readToken();
     }
   }
-
-  // Now we go through each symbol (label), resolving references.
-  //
-  // If it's not on this file (`symbols` map), we assume it's
-  // found on other file (`references` map).
-  //
-  for (auto map_it = references.begin(); map_it != references.end(); ++map_it) {
-
-    // Which symbol was referenced
-    string symbol_name = map_it->first;
-
-    // All addresses where the symbol above was referenced
-    set<uword_t> symbol_called = map_it->second;
-
-    // Is this symbol declared on this file?
-    // If not then leave it be at `references`
-    auto sym = symbols.find(symbol_name);
-
-    if (sym == symbols.end())
+  
+  sf.close();
+  
+  // resolve references
+  for (auto map_it = references.begin(); map_it != references.end();) {
+    // external symbols
+    auto sym = symbols.find(map_it->first);
+    if (sym == symbols.end()) {
+      ++map_it;
       continue;
-
-    // If it's on this file, we replace it's address on every
-    // memory location that called it
-    uword_t symbol_address = sym->second;
-
-    for (auto it = symbol_called.begin(); it != symbol_called.end(); ++it)
-      mem[*it] += symbol_address;
-
-    // And remove it from the external reference map
-    references.erase(map_it);
+    }
+    
+    // resolve
+    for (auto it = map_it->second.begin(); it != map_it->second.end(); ++it) {
+      mem[*it] += sym->second;
+    }
+    
+    references.erase(map_it++);
   }
-
-  // Now, outputting the binary stuff
-  fstream output_file(argv[2], fstream::out | fstream::binary);
-
-  if (!output_file) {
-    cout << "Couldn't write to file '" << argv[2] << "'" << endl;
-    return EXIT_FAILURE;
-  }
-
+  
+  fstream of(argv[2], fstream::out | fstream::binary);
+  
   {
     uword_t tmp;
-
+    
     // write number of exported symbols
     tmp = exported.size();
-    output_file.write((const char*)&tmp, sizeof(uword_t));
-
+    of.write((const char*)&tmp, sizeof(uword_t));
+    
     // write exported symbols
     for (auto& exp : exported) {
       // string
-      output_file.write(exp.c_str(), exp.size() + 1);
-
+      of.write(exp.c_str(), exp.size() + 1);
+      
       // address
       tmp = symbols[exp];
-      output_file.write((const char*)&tmp, sizeof(uword_t));
+      of.write((const char*)&tmp, sizeof(uword_t));
     }
-
+    
     // write number of symbols of pending references
     tmp = references.size();
-    output_file.write((const char*)&tmp, sizeof(uword_t));
-
+    of.write((const char*)&tmp, sizeof(uword_t));
+    
     // write symbols of pending references
     for (auto& sym : references) {
       // string
-      output_file.write(sym.first.c_str(), sym.first.size() + 1);
-
+      of.write(sym.first.c_str(), sym.first.size() + 1);
+      
       // write number of references to current symbol
       tmp = sym.second.size();
-      output_file.write((const char*)&tmp, sizeof(uword_t));
-
+      of.write((const char*)&tmp, sizeof(uword_t));
+      
       // write references to current symbol
       for (auto ref : sym.second) {
         tmp = ref;
-        output_file.write((const char*)&tmp, sizeof(uword_t));
+        of.write((const char*)&tmp, sizeof(uword_t));
       }
     }
-
+    
     // write number of relative addresses
     tmp = relatives.size();
-    output_file.write((const char*)&tmp, sizeof(uword_t));
-
+    of.write((const char*)&tmp, sizeof(uword_t));
+    
     // write relative addresses
     for (auto addr : relatives) {
       tmp = addr;
-      output_file.write((const char*)&tmp, sizeof(uword_t));
+      of.write((const char*)&tmp, sizeof(uword_t));
     }
-
+    
     // write assembled code size
-    output_file.write((const char*)&mem_size, sizeof(uword_t));
-
+    of.write((const char*)&mem_size, sizeof(uword_t));
+    
     // write assembled code
-    output_file.write((const char*)mem, sizeof(uword_t)*mem_size);
+    of.write((const char*)mem, sizeof(uword_t)*mem_size);
   }
-
-  output_file.close();
-
+  
+  of.close();
+  
   delete[] mem;
-
+  
   return 0;
 }
