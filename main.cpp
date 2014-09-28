@@ -113,8 +113,6 @@ inline static Field parseField(string token) {
     field.is_hex = true;
   }
   else { // symbol means an address that needs to be relocated later
-    relatives.emplace(mem_size);
-    
     // looking for array offset
     if (token.find("+") != string::npos) {
       string offset = token.substr(token.find("+") + 1, token.size());
@@ -174,7 +172,11 @@ int main(int argc, char* argv[]) {
     }
     else if (token == ".ptr") { // pointer
       token = af.readToken();
-      mem[mem_size] = parseField(token).word;
+      Field field = parseField(token);
+      if (!field.is_hex) {
+        relatives.emplace(mem_size);
+      }
+      mem[mem_size] = field.word;
       mem_size++;
       token = af.readToken(); // next symbol
     }
@@ -185,14 +187,14 @@ int main(int argc, char* argv[]) {
   }
   
   // reading text section
-  int field = 0;
+  int field_id = 0;
   for (string token = af.readToken(); token.size();) {
     // field 2 omitted
-    if (field == 2 && af.currentTokenLine != af.lastTokenLine) {
+    if (field_id == 2 && af.currentTokenLine != af.lastTokenLine) {
       relatives.emplace(mem_size);
       mem[mem_size] = mem_size + 1;
       mem_size++;
-      field = (field + 1)%3;
+      field_id = (field_id + 1)%3;
     }
     // symbol found
     else if (token[token.size() - 1] == ':') {
@@ -203,9 +205,13 @@ int main(int argc, char* argv[]) {
     }
     // field 0, 1, or field 2 specified
     else {
-      mem[mem_size] = parseField(token).word;
+      Field field = parseField(token);
+      if (!field.is_hex) {
+        relatives.emplace(mem_size);
+      }
+      mem[mem_size] = field.word;
       mem_size++;
-      field = (field + 1)%3;
+      field_id = (field_id + 1)%3;
       token = af.readToken();
     }
   }
