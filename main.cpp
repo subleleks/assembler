@@ -127,22 +127,20 @@ struct ObjectCode {
   uword_t mem_size = 0;
   uword_t* mem = new uword_t[MEM_WORDS];
   
+  string token;
+  
   ObjectCode(const string& fn) : mem_size(0), mem(new uword_t[MEM_WORDS]) {
     AssemblyFile af(fn);
     
     af.readToken(); // reading ".export"
     
     // reading export section
-    for (
-      string token = af.readToken();
-      token != ".data";
-      token = af.readToken()
-    ) {
+    for (token = af.readToken(); token != ".data"; token = af.readToken()) {
       exported.insert(token);
     }
     
     // reading data section
-    for (string token = af.readToken(); token != ".text";) {
+    for (token = af.readToken(); token != ".text";) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
       token = af.readToken();
       if (token == ".array") { // uninitialized array
@@ -161,7 +159,7 @@ struct ObjectCode {
       }
       else if (token == ".ptr") { // pointer
         token = af.readToken();
-        pushField(token);
+        pushField();
         token = af.readToken(); // next symbol
       }
       else { // initialized word
@@ -172,7 +170,7 @@ struct ObjectCode {
     
     // reading text section
     int field_id = 0;
-    for (string token = af.readToken(); token.size();) {
+    for (token = af.readToken(); token.size();) {
       // field 2 omitted
       if (field_id == 2 && af.currentTokenLine != af.lastTokenLine) {
         relatives.emplace(mem_size);
@@ -189,7 +187,7 @@ struct ObjectCode {
       }
       // field 0, 1, or field 2 specified
       else {
-        pushField(token);
+        pushField();
         field_id = (field_id + 1)%3;
         token = af.readToken();
       }
@@ -204,7 +202,7 @@ struct ObjectCode {
     delete[] mem;
   }
   
-  void pushField(string& token) {
+  void pushField() {
     Field field = parseField(token);
     if (!field.is_hex) {
       relatives.emplace(mem_size);
