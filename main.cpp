@@ -65,7 +65,7 @@ struct AssemblyFile {
       }
       else if (c == ' ' || c == '\t') { // white space found
         if (token.size()) { // token was read
-          return token;
+          break;
         }
       }
       else { // concatenating the character read
@@ -90,7 +90,8 @@ struct Field {
   }
 };
 
-struct ObjectCode {
+class ObjectCode {
+private:
   set<string> exported;
   map<string, uword_t> symbols;
   map<string, set<uword_t>> references;
@@ -99,7 +100,7 @@ struct ObjectCode {
   uword_t* mem = new uword_t[MEM_WORDS];
   AssemblyFile af;
   string token;
-  
+public:
   ObjectCode(const string& fn) :
   mem_size(0), mem(new uword_t[MEM_WORDS]), af(fn)
   {
@@ -113,7 +114,7 @@ struct ObjectCode {
   ~ObjectCode() {
     delete[] mem;
   }
-  
+private:
   void readExportSection() {
     af.readToken(); // irgnore ".export" token
     for (token = af.readToken(); token != ".data"; token = af.readToken()) {
@@ -238,7 +239,7 @@ struct ObjectCode {
       references.erase(map_it++);
     }
   }
-  
+public:
   void write(const string& fn) {
     fstream of(fn.c_str(), fstream::out | fstream::binary);
     uword_t tmp;
