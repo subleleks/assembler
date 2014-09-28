@@ -106,29 +106,18 @@ inline static uword_t parseData(const string& token) {
   return data;
 }
 
-inline static Field parseField(string token) {
+inline static Field parseField(string& token) {
   Field field;
-  if (token[0] == '0' && token[1] == 'x') { // hex means absolute address
+  if (token[0] == '0' && token[1] == 'x') { // checking for hex notation
     sscanf(token.c_str(), "%i", &field.word);
     field.is_hex = true;
   }
-  else { // symbol means an address that needs to be relocated later
-    // looking for array offset
-    if (token.find("+") != string::npos) {
-      string offset = token.substr(token.find("+") + 1, token.size());
-      token = token.substr(0, token.find("+"));
-      stringstream ss;
-      ss << offset;
-      ss >> field.word;
-    }
-    
-    auto sym = symbols.find(token);
-    if (sym == symbols.end()) { // symbol not found. leave a reference
-      references[token].emplace(mem_size);
-    }
-    else { // symbol found. the field is the address of the symbol
-      field.word = sym->second;
-    }
+  else if (token.find("+") != string::npos) { // check for array offset
+    string offset = token.substr(token.find("+") + 1, token.size());
+    token = token.substr(0, token.find("+")); // remove offset from token
+    stringstream ss;
+    ss << offset;
+    ss >> field.word;
   }
   return field;
 }
@@ -175,6 +164,13 @@ int main(int argc, char* argv[]) {
       Field field = parseField(token);
       if (!field.is_hex) {
         relatives.emplace(mem_size);
+        auto sym = symbols.find(token);
+        if (sym == symbols.end()) { // symbol not found. leave a reference
+          references[token].emplace(mem_size);
+        }
+        else { // symbol found. the field is the address of the symbol
+          field.word += sym->second;
+        }
       }
       mem[mem_size] = field.word;
       mem_size++;
@@ -208,6 +204,13 @@ int main(int argc, char* argv[]) {
       Field field = parseField(token);
       if (!field.is_hex) {
         relatives.emplace(mem_size);
+        auto sym = symbols.find(token);
+        if (sym == symbols.end()) { // symbol not found. leave a reference
+          references[token].emplace(mem_size);
+        }
+        else { // symbol found. the field is the address of the symbol
+          field.word += sym->second;
+        }
       }
       mem[mem_size] = field.word;
       mem_size++;
