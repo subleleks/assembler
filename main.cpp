@@ -97,37 +97,7 @@ struct ObjectCode {
   set<uword_t> relatives;
   uword_t mem_size = 0;
   uword_t* mem = new uword_t[MEM_WORDS];
-  
   string token;
-  
-  static uword_t parseData(const string& token) {
-    uword_t data = 0;
-    if (token[0] == '0' && token[1] == 'x') { // for hex notation
-      sscanf(token.c_str(), "%i", &data);
-    }
-    else { // for decimal notation
-      stringstream ss;
-      ss << token;
-      ss >> data; 
-    }
-    return data;
-  }
-  
-  static Field parseField(string& token) {
-    Field field;
-    if (token[0] == '0' && token[1] == 'x') { // checking for hex notation
-      sscanf(token.c_str(), "%i", &field.word);
-      field.is_hex = true;
-    }
-    else if (token.find("+") != string::npos) { // check for array offset
-      string offset = token.substr(token.find("+") + 1, token.size());
-      token = token.substr(0, token.find("+")); // remove offset from token
-      stringstream ss;
-      ss << offset;
-      ss >> field.word;
-    }
-    return field;
-  }
   
   ObjectCode(const string& fn) : mem_size(0), mem(new uword_t[MEM_WORDS]) {
     AssemblyFile af(fn);
@@ -145,7 +115,7 @@ struct ObjectCode {
       token = af.readToken();
       if (token == ".array") { // uninitialized array
         token = af.readToken();
-        mem_size += parseData(token);
+        mem_size += parseData();
         token = af.readToken(); // next symbol
       }
       else if (token == ".iarray") { // initialized array
@@ -154,7 +124,7 @@ struct ObjectCode {
           af.currentTokenLine == af.lastTokenLine;
           token = af.readToken()
         ) {
-          mem[mem_size++] = parseData(token);
+          mem[mem_size++] = parseData();
         }
       }
       else if (token == ".ptr") { // pointer
@@ -163,7 +133,7 @@ struct ObjectCode {
         token = af.readToken(); // next symbol
       }
       else { // initialized word
-        mem[mem_size++] = parseData(token);
+        mem[mem_size++] = parseData();
         token = af.readToken(); // next symbol
       }
     }
@@ -202,8 +172,37 @@ struct ObjectCode {
     delete[] mem;
   }
   
+  uword_t parseData() {
+    uword_t data = 0;
+    if (token[0] == '0' && token[1] == 'x') { // for hex notation
+      sscanf(token.c_str(), "%i", &data);
+    }
+    else { // for decimal notation
+      stringstream ss;
+      ss << token;
+      ss >> data; 
+    }
+    return data;
+  }
+  
+  Field parseField() {
+    Field field;
+    if (token[0] == '0' && token[1] == 'x') { // checking for hex notation
+      sscanf(token.c_str(), "%i", &field.word);
+      field.is_hex = true;
+    }
+    else if (token.find("+") != string::npos) { // check for array offset
+      string offset = token.substr(token.find("+") + 1, token.size());
+      token = token.substr(0, token.find("+")); // remove offset from token
+      stringstream ss;
+      ss << offset;
+      ss >> field.word;
+    }
+    return field;
+  }
+  
   void pushField() {
-    Field field = parseField(token);
+    Field field = parseField();
     if (!field.is_hex) {
       relatives.emplace(mem_size);
       auto sym = symbols.find(token);
