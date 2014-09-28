@@ -24,11 +24,13 @@ typedef uint32_t uword_t;
 struct AssemblyFile {
   fstream f;
   int currentLine, lastTokenLine, currentTokenLine;
+  
   AssemblyFile(const string& fn) :
   f(fn.c_str(), fstream::in),
   currentLine(1), lastTokenLine(1), currentTokenLine(1) {
     
   }
+  
   string readToken() {
     string token = "";
     lastTokenLine = currentTokenLine;
@@ -74,6 +76,7 @@ struct AssemblyFile {
     currentTokenLine = currentLine;
     return token;
   }
+  
   void close() {
     f.close();
   }
@@ -123,6 +126,7 @@ struct ObjectCode {
   set<uword_t> relatives;
   uword_t mem_size = 0;
   uword_t* mem = new uword_t[MEM_WORDS];
+  
   ObjectCode(const string& fn) : mem_size(0), mem(new uword_t[MEM_WORDS]) {
     AssemblyFile af(fn);
     
