@@ -78,6 +78,14 @@ struct AssemblyFile {
   }
 };
 
+struct Field {
+  uword_t word;
+  bool is_hex;
+  Field() : word(0), is_hex(false) {
+    
+  }
+};
+
 static set<string> exported;
 static map<string, uword_t> symbols;
 static map<string, set<uword_t>> references;
@@ -98,10 +106,11 @@ inline static uword_t parseData(const string& token) {
   return data;
 }
 
-inline static uword_t parseField(string token) {
-  uword_t field = 0;
+inline static Field parseField(string token) {
+  Field field;
   if (token[0] == '0' && token[1] == 'x') { // hex means absolute address
-    sscanf(token.c_str(), "%i", &field);
+    sscanf(token.c_str(), "%i", &field.word);
+    field.is_hex = true;
   }
   else { // symbol means an address that needs to be relocated later
     relatives.emplace(mem_size);
@@ -112,7 +121,7 @@ inline static uword_t parseField(string token) {
       token = token.substr(0, token.find("+"));
       stringstream ss;
       ss << offset;
-      ss >> field;
+      ss >> field.word;
     }
     
     auto sym = symbols.find(token);
@@ -120,7 +129,7 @@ inline static uword_t parseField(string token) {
       references[token].emplace(mem_size);
     }
     else { // symbol found. the field is the address of the symbol
-      field = sym->second;
+      field.word = sym->second;
     }
   }
   return field;
@@ -165,7 +174,7 @@ int main(int argc, char* argv[]) {
     }
     else if (token == ".ptr") { // pointer
       token = af.readToken();
-      mem[mem_size] = parseField(token);
+      mem[mem_size] = parseField(token).word;
       mem_size++;
       token = af.readToken(); // next symbol
     }
@@ -194,7 +203,7 @@ int main(int argc, char* argv[]) {
     }
     // field 0, 1, or field 2 specified
     else {
-      mem[mem_size] = parseField(token);
+      mem[mem_size] = parseField(token).word;
       mem_size++;
       field = (field + 1)%3;
       token = af.readToken();
