@@ -97,19 +97,31 @@ struct ObjectCode {
   set<uword_t> relatives;
   uword_t mem_size = 0;
   uword_t* mem = new uword_t[MEM_WORDS];
+  AssemblyFile af;
   string token;
   
-  ObjectCode(const string& fn) : mem_size(0), mem(new uword_t[MEM_WORDS]) {
-    AssemblyFile af(fn);
-    
-    af.readToken(); // reading ".export"
-    
-    // reading export section
+  ObjectCode(const string& fn) :
+  mem_size(0), mem(new uword_t[MEM_WORDS]), af(fn)
+  {
+    readExportSection();
+    readDataSection();
+    readTextSection();
+    af.close();
+    resolveReferences();
+  }
+  
+  ~ObjectCode() {
+    delete[] mem;
+  }
+  
+  void readExportSection() {
+    af.readToken(); // irgnore ".export" token
     for (token = af.readToken(); token != ".data"; token = af.readToken()) {
       exported.insert(token);
     }
-    
-    // reading data section
+  }
+  
+  void readDataSection() {
     for (token = af.readToken(); token != ".text";) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
       token = af.readToken();
@@ -137,8 +149,9 @@ struct ObjectCode {
         token = af.readToken(); // next symbol
       }
     }
-    
-    // reading text section
+  }
+  
+  void readTextSection() {
     int field_id = 0;
     for (token = af.readToken(); token.size();) {
       // field 2 omitted
@@ -162,14 +175,6 @@ struct ObjectCode {
         token = af.readToken();
       }
     }
-    
-    af.close();
-    
-    resolveReferences();
-  }
-  
-  ~ObjectCode() {
-    delete[] mem;
   }
   
   uword_t parseData() {
