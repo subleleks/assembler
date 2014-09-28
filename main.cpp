@@ -161,19 +161,7 @@ struct ObjectCode {
       }
       else if (token == ".ptr") { // pointer
         token = af.readToken();
-        Field field = parseField(token);
-        if (!field.is_hex) {
-          relatives.emplace(mem_size);
-          auto sym = symbols.find(token);
-          if (sym == symbols.end()) { // symbol not found. leave a reference
-            references[token].emplace(mem_size);
-          }
-          else { // symbol found. the field is the address of the symbol
-            field.word += sym->second;
-          }
-        }
-        mem[mem_size] = field.word;
-        mem_size++;
+        pushField(token);
         token = af.readToken(); // next symbol
       }
       else { // initialized word
@@ -201,19 +189,7 @@ struct ObjectCode {
       }
       // field 0, 1, or field 2 specified
       else {
-        Field field = parseField(token);
-        if (!field.is_hex) {
-          relatives.emplace(mem_size);
-          auto sym = symbols.find(token);
-          if (sym == symbols.end()) { // symbol not found. leave a reference
-            references[token].emplace(mem_size);
-          }
-          else { // symbol found. the field is the address of the symbol
-            field.word += sym->second;
-          }
-        }
-        mem[mem_size] = field.word;
-        mem_size++;
+        pushField(token);
         field_id = (field_id + 1)%3;
         token = af.readToken();
       }
@@ -226,6 +202,21 @@ struct ObjectCode {
   
   ~ObjectCode() {
     delete[] mem;
+  }
+  
+  void pushField(string& token) {
+    Field field = parseField(token);
+    if (!field.is_hex) {
+      relatives.emplace(mem_size);
+      auto sym = symbols.find(token);
+      if (sym == symbols.end()) { // symbol not found. leave a reference
+        references[token].emplace(mem_size);
+      }
+      else { // symbol found. the field is the address of the symbol
+        field.word += sym->second;
+      }
+    }
+    mem[mem_size++] = field.word;
   }
   
   void resolve_references() {
