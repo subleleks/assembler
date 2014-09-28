@@ -21,10 +21,10 @@ typedef uint32_t uword_t;
 #define MEM_WORDS 0x2000
 #endif
 
-struct SourceFile {
+struct AssemblyFile {
   fstream f;
   int currentLine, lastTokenLine, currentTokenLine;
-  SourceFile(const string& fn) :
+  AssemblyFile(const string& fn) :
   currentLine(1), lastTokenLine(1), currentTokenLine(1) {
     
   }
@@ -132,54 +132,54 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   
-  SourceFile sf(argv[1]);
+  AssemblyFile af(argv[1]);
   
-  sf.readToken(); // reading ".export"
+  af.readToken(); // reading ".export"
   
   // reading export section
   for (
-    string token = sf.readToken();
+    string token = af.readToken();
     token != ".data";
-    token = sf.readToken()
+    token = af.readToken()
   ) {
     exported.insert(token);
   }
   
   // reading data section
-  for (string token = sf.readToken(); token != ".text";) {
+  for (string token = af.readToken(); token != ".text";) {
     symbols[token.substr(0, token.size() - 1)] = mem_size;
-    token = sf.readToken();
+    token = af.readToken();
     if (token == ".array") { // uninitialized array
-      token = sf.readToken();
+      token = af.readToken();
       mem_size += parseData(token);
-      token = sf.readToken(); // next symbol
+      token = af.readToken(); // next symbol
     }
     else if (token == ".iarray") { // initialized array
       for (
-        token = sf.readToken();
-        sf.currentTokenLine == sf.lastTokenLine;
-        token = sf.readToken()
+        token = af.readToken();
+        af.currentTokenLine == af.lastTokenLine;
+        token = af.readToken()
       ) {
         mem[mem_size++] = parseData(token);
       }
     }
     else if (token == ".ptr") { // pointer
-      token = sf.readToken();
+      token = af.readToken();
       mem[mem_size] = parseField(token);
       mem_size++;
-      token = sf.readToken(); // next symbol
+      token = af.readToken(); // next symbol
     }
     else { // initialized word
       mem[mem_size++] = parseData(token);
-      token = sf.readToken(); // next symbol
+      token = af.readToken(); // next symbol
     }
   }
   
   // reading text section
   int field = 0;
-  for (string token = sf.readToken(); token.size();) {
+  for (string token = af.readToken(); token.size();) {
     // field 2 omitted
-    if (field == 2 && sf.currentTokenLine != sf.lastTokenLine) {
+    if (field == 2 && af.currentTokenLine != af.lastTokenLine) {
       relatives.emplace(mem_size);
       mem[mem_size] = mem_size + 1;
       mem_size++;
@@ -190,18 +190,18 @@ int main(int argc, char* argv[]) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
       if (token == "start:")
         exported.emplace("start");
-      token = sf.readToken();
+      token = af.readToken();
     }
     // field 0, 1, or field 2 specified
     else {
       mem[mem_size] = parseField(token);
       mem_size++;
       field = (field + 1)%3;
-      token = sf.readToken();
+      token = af.readToken();
     }
   }
   
-  sf.close();
+  af.close();
   
   // resolve references
   for (auto map_it = references.begin(); map_it != references.end();) {
@@ -221,60 +221,57 @@ int main(int argc, char* argv[]) {
   }
   
   fstream of(argv[2], fstream::out | fstream::binary);
+  uword_t tmp;
   
-  {
-    uword_t tmp;
+  // write number of exported symbols
+  tmp = exported.size();
+  of.write((const char*)&tmp, sizeof(uword_t));
+  
+  // write exported symbols
+  for (auto& exp : exported) {
+    // string
+    of.write(exp.c_str(), exp.size() + 1);
     
-    // write number of exported symbols
-    tmp = exported.size();
+    // address
+    tmp = symbols[exp];
     of.write((const char*)&tmp, sizeof(uword_t));
-    
-    // write exported symbols
-    for (auto& exp : exported) {
-      // string
-      of.write(exp.c_str(), exp.size() + 1);
-      
-      // address
-      tmp = symbols[exp];
-      of.write((const char*)&tmp, sizeof(uword_t));
-    }
-    
-    // write number of symbols of pending references
-    tmp = references.size();
-    of.write((const char*)&tmp, sizeof(uword_t));
-    
-    // write symbols of pending references
-    for (auto& sym : references) {
-      // string
-      of.write(sym.first.c_str(), sym.first.size() + 1);
-      
-      // write number of references to current symbol
-      tmp = sym.second.size();
-      of.write((const char*)&tmp, sizeof(uword_t));
-      
-      // write references to current symbol
-      for (auto ref : sym.second) {
-        tmp = ref;
-        of.write((const char*)&tmp, sizeof(uword_t));
-      }
-    }
-    
-    // write number of relative addresses
-    tmp = relatives.size();
-    of.write((const char*)&tmp, sizeof(uword_t));
-    
-    // write relative addresses
-    for (auto addr : relatives) {
-      tmp = addr;
-      of.write((const char*)&tmp, sizeof(uword_t));
-    }
-    
-    // write assembled code size
-    of.write((const char*)&mem_size, sizeof(uword_t));
-    
-    // write assembled code
-    of.write((const char*)mem, sizeof(uword_t)*mem_size);
   }
+  
+  // write number of symbols of pending references
+  tmp = references.size();
+  of.write((const char*)&tmp, sizeof(uword_t));
+  
+  // write symbols of pending references
+  for (auto& sym : references) {
+    // string
+    of.write(sym.first.c_str(), sym.first.size() + 1);
+    
+    // write number of references to current symbol
+    tmp = sym.second.size();
+    of.write((const char*)&tmp, sizeof(uword_t));
+    
+    // write references to current symbol
+    for (auto ref : sym.second) {
+      tmp = ref;
+      of.write((const char*)&tmp, sizeof(uword_t));
+    }
+  }
+  
+  // write number of relative addresses
+  tmp = relatives.size();
+  of.write((const char*)&tmp, sizeof(uword_t));
+  
+  // write relative addresses
+  for (auto addr : relatives) {
+    tmp = addr;
+    of.write((const char*)&tmp, sizeof(uword_t));
+  }
+  
+  // write assembled code size
+  of.write((const char*)&mem_size, sizeof(uword_t));
+  
+  // write assembled code
+  of.write((const char*)mem, sizeof(uword_t)*mem_size);
   
   of.close();
   
