@@ -10,6 +10,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <queue>
 #include <string>
 #include <sstream>
 
@@ -23,6 +24,7 @@ typedef uint32_t uword_t;
 
 struct AssemblyFile {
   fstream f;
+  queue<string> pushed_tokens;
   int currentLine, lastTokenLine, currentTokenLine;
   
   AssemblyFile(const string& fn) :
@@ -33,6 +35,13 @@ struct AssemblyFile {
   
   string readToken() {
     string token = "";
+    
+    if (pushed_tokens.size()) {
+      token = pushed_tokens.front();
+      pushed_tokens.pop();
+      return token;
+    }
+    
     lastTokenLine = currentTokenLine;
     
     for (char c = f.get(); f.good(); c = f.get()) {
@@ -77,6 +86,11 @@ struct AssemblyFile {
     return token;
   }
   
+  AssemblyFile& push(const string& token) {
+    pushed_tokens.push(token);
+    return *this;
+  }
+  
   void close() {
     f.close();
   }
@@ -92,6 +106,8 @@ struct Field {
 
 class ObjectCode {
 private:
+  set<string> pseudo_instructions;
+  
   set<string> exported;
   map<string, uword_t> symbols;
   map<string, set<uword_t>> references;
@@ -104,6 +120,7 @@ public:
   ObjectCode(const string& fn) :
   mem_size(0), mem(new uword_t[MEM_WORDS]), af(fn)
   {
+    initPseudoInstructions();
     readExportSection();
     readDataSection();
     readTextSection();
@@ -115,6 +132,13 @@ public:
     delete[] mem;
   }
 private:
+  void initPseudoInstructions() {
+    pseudo_instructions.insert("add");
+    pseudo_instructions.insert("sub");
+    pseudo_instructions.insert("clr");
+    pseudo_instructions.insert("mov");
+  }
+  
   void readExportSection() {
     af.readToken(); // irgnore ".export" token
     for (token = af.readToken(); token != ".data"; token = af.readToken()) {
@@ -123,6 +147,7 @@ private:
   }
   
   void readDataSection() {
+    af.push("$tmp:").push("0"); // for pseudo-instructions
     for (token = af.readToken(); token != ".text";) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
       token = af.readToken();
@@ -169,6 +194,21 @@ private:
           exported.emplace("start");
         token = af.readToken();
       }
+      // pseudo-instructions
+      else if (pseudo_instructions.find(token) != pseudo_instructions.end()) {
+        if (token == "add") {
+          readAdd();
+        }
+        else if (token == "sub") {
+          readSub();
+        }
+        else if (token == "clr") {
+          readClr();
+        }
+        else if (token == "mov") {
+          readMov();
+        }
+      }
       // field 0, 1, or field 2 specified
       else {
         pushField();
@@ -176,6 +216,64 @@ private:
         token = af.readToken();
       }
     }
+  }
+  
+  void readAdd() {
+    string a = af.readToken();
+    string b = af.readToken();
+    string c = af.readToken();
+    if (af.currentTokenLine == af.lastTokenLine) { // add a b c (a = b + c;)
+      af.push("$tmp").push("$tmp");
+      af.push(b).push("$tmp");
+      af.push(c).push("$tmp");
+      af.push(a).push(a);
+      af.push("$tmp").push(a);
+      token = af.readToken();
+    }
+    else { // add a b (a += b;)
+      af.push("$tmp").push("$tmp");
+      af.push(b).push("$tmp");
+      af.push("$tmp").push(a);
+      if (token.size() == 0) { // no token left in the file after field b
+        token = af.readToken();
+      }
+    }
+  }
+  
+  void readSub() {
+    string a = af.readToken();
+    string b = af.readToken();
+    string c = af.readToken();
+    if (af.currentTokenLine == af.lastTokenLine) { // sub a b c (a = b - c;)
+      af.push("$tmp").push("$tmp");
+      af.push(b).push("$tmp");
+      af.push(a).push(a);
+      af.push("$tmp").push(a);
+      af.push(c).push(a);
+      token = af.readToken();
+    }
+    else { // sub a b (a -= b;)
+      af.push(b).push(a);
+      if (token.size() == 0) { // no token left in the file after field b
+        token = af.readToken();
+      }
+    }
+  }
+  
+  void readClr() { // a = 0;
+    string a = af.readToken();
+    af.push(a).push(a);
+    token = af.readToken();
+  }
+  
+  void readMov() { // a = b;
+    string a = af.readToken();
+    string b = af.readToken();
+    af.push("$tmp").push("$tmp");
+    af.push(b).push("$tmp");
+    af.push(a).push(a);
+    af.push("$tmp").push(a);
+    token = af.readToken();
   }
   
   uword_t parseData() {
