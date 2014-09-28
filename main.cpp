@@ -221,7 +221,14 @@ struct ObjectCode {
     
     af.close();
     
-    // resolve references
+    resolve_references();
+  }
+  
+  ~ObjectCode() {
+    delete[] mem;
+  }
+  
+  void resolve_references() {
     for (auto map_it = references.begin(); map_it != references.end();) {
       // external symbols
       auto sym = symbols.find(map_it->first);
@@ -237,10 +244,6 @@ struct ObjectCode {
       
       references.erase(map_it++);
     }
-  }
-  
-  ~ObjectCode() {
-    delete[] mem;
   }
   
   void write(const string& fn) {
