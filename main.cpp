@@ -385,7 +385,7 @@ private:
     af.push("$tmp")   .push("$tmp2");
     af.push(a)        .push("$tmp2")  .push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // goto label;
+    af.push("$tmp")   .push("$tmp")   .push(label); // a < b, goto label;
     
     // check if a <= b (if true, a == b, jump to after goto label;)
     af.push("$tmp")   .push("$tmp");
@@ -394,7 +394,7 @@ private:
     af.push("$tmp")   .push("$tmp2");
     af.push(b)        .push("$tmp2")  .push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // goto label;
+    af.push("$tmp")   .push("$tmp")   .push(label); // a > b, goto label;
     
     token = af.readToken();
   }
