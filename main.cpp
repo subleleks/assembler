@@ -479,7 +479,23 @@ private:
   }
   
   void readBf() { // if (!a) goto label;
-    //TODO
+    string a = af.readToken();
+    string label = af.readToken();
+    
+    // check if a >= 0
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp") .push("4"); // jump to next check
+    
+    // a != 0
+    af.push("$tmp") .push("$tmp") .push("13"); // jump to after goto label;
+    
+    // check if a <= 0
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2").push(label); // goto label;
+    
+    token = af.readToken();
   }
   
   uword_t parseData() {
