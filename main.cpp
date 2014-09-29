@@ -333,7 +333,7 @@ private:
     string a = af.readToken();
     string b = af.readToken();
     string label = af.readToken();
-    //FIXME af.push("")
+    //FIXME af.push("bge")  .push(a)  .push(b)  .push(");
   }
   
   void readBne() { // if (a != b) goto label;
@@ -348,7 +348,7 @@ private:
     af.push(b)        .push("$tmp");
     af.push("$tmp2")  .push("$tmp2");
     af.push("$tmp")   .push("$tmp2");
-    af.push(a)        .push("$tmp2");
+    af.push(a)        .push("$tmp2")  .push(label);
     token = af.readToken();
   }
   
@@ -360,7 +360,7 @@ private:
     af.push(a)        .push("$tmp");
     af.push("$tmp2")  .push("$tmp2");
     af.push("$tmp")   .push("$tmp2");
-    af.push(b)        .push("$tmp2");
+    af.push(b)        .push("$tmp2")  .push(label);
     token = af.readToken();
   }
   
