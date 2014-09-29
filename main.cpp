@@ -309,17 +309,17 @@ private:
     string a = af.readToken();
     string b = af.readToken();
     if (af.currentTokenLine == af.lastTokenLine) { // neg a b (a = -b;)
-      af.push(a)  .push(a);
-      af.push(b)  .push(a);
+      af.push(a).push(a);
+      af.push(b).push(a);
       token = af.readToken();
     }
     else { // neg a (a = -a;)
-      af.push("$tmp")   .push("$tmp");
-      af.push(a)        .push("$tmp");
-      af.push("$tmp2")  .push("$tmp2");
-      af.push("$tmp")   .push("$tmp2");
-      af.push(a)        .push(a);
-      af.push("$tmp2")  .push(a);
+      af.push("$tmp") .push("$tmp");
+      af.push(a)      .push("$tmp");
+      af.push("$tmp2").push("$tmp2");
+      af.push("$tmp") .push("$tmp2");
+      af.push(a)      .push(a);
+      af.push("$tmp2").push(a);
       if (token.size() == 0) { // no token left in the file after field a
         token = af.readToken();
       }
@@ -354,21 +354,21 @@ private:
     string label = af.readToken();
     
     // check if a >= b
-    af.push("$tmp")   .push("$tmp");
-    af.push(b)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(a)        .push("$tmp2")  .push("4"); // jump to next check
+    af.push("$tmp") .push("$tmp");
+    af.push(b)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(a)      .push("$tmp2").push("4"); // jump to next check
     
     // a != b
-    af.push("$tmp")   .push("$tmp")   .push("16"); // jump to after goto label;
+    af.push("$tmp") .push("$tmp") .push("16"); // jump to after goto label;
     
     // check if a <= b
-    af.push("$tmp")   .push("$tmp");
-    af.push(a)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(b)        .push("$tmp2")  .push(label); // goto label;
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(b)      .push("$tmp2").push(label); // goto label;
     
     token = af.readToken();
   }
@@ -379,22 +379,22 @@ private:
     string label = af.readToken();
     
     // check if a >= b (if true, goto next check)
-    af.push("$tmp")   .push("$tmp");
-    af.push(b)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(a)        .push("$tmp2")  .push("4"); // jump to after goto label;
+    af.push("$tmp") .push("$tmp");
+    af.push(b)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(a)      .push("$tmp2").push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // a < b, goto label;
+    af.push("$tmp") .push("$tmp") .push(label); // a < b, goto label;
     
     // check if a <= b (if true, a == b, jump to after goto label;)
-    af.push("$tmp")   .push("$tmp");
-    af.push(a)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(b)        .push("$tmp2")  .push("4"); // jump to after goto label;
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(b)      .push("$tmp2").push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // a > b, goto label;
+    af.push("$tmp") .push("$tmp") .push(label); // a > b, goto label;
     
     token = af.readToken();
   }
@@ -403,11 +403,11 @@ private:
     string a = af.readToken();
     string b = af.readToken();
     string label = af.readToken();
-    af.push("$tmp")   .push("$tmp");
-    af.push(b)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(a)        .push("$tmp2")  .push(label);
+    af.push("$tmp") .push("$tmp");
+    af.push(b)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(a)      .push("$tmp2").push(label);
     token = af.readToken();
   }
   
@@ -415,11 +415,11 @@ private:
     string a = af.readToken();
     string b = af.readToken();
     string label = af.readToken();
-    af.push("$tmp")   .push("$tmp");
-    af.push(a)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(b)        .push("$tmp2")  .push(label);
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(b)      .push("$tmp2").push(label);
     token = af.readToken();
   }
   
@@ -429,13 +429,13 @@ private:
     string label = af.readToken();
     
     // check if a <= b
-    af.push("$tmp")   .push("$tmp");
-    af.push(a)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(b)        .push("$tmp2")  .push("4"); // jump to after goto label;
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(b)      .push("$tmp2").push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // goto label;
+    af.push("$tmp") .push("$tmp") .push(label); // goto label;
     
     token = af.readToken();
   }
@@ -446,19 +446,36 @@ private:
     string label = af.readToken();
     
     // check if a >= b
-    af.push("$tmp")   .push("$tmp");
-    af.push(b)        .push("$tmp");
-    af.push("$tmp2")  .push("$tmp2");
-    af.push("$tmp")   .push("$tmp2");
-    af.push(a)        .push("$tmp2")  .push("4"); // jump to after goto label;
+    af.push("$tmp") .push("$tmp");
+    af.push(b)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2");
+    af.push(a)      .push("$tmp2").push("4"); // jump to after goto label;
     
-    af.push("$tmp")   .push("$tmp")   .push(label); // goto label;
+    af.push("$tmp") .push("$tmp") .push(label); // goto label;
     
     token = af.readToken();
   }
   
   void readBt() { // if (a) goto label;
-    //TODO
+    string a = af.readToken();
+    string label = af.readToken();
+    
+    // check if a >= 0 (if true, goto next check)
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp") .push("4"); // jump to after goto label;
+    
+    af.push("$tmp") .push("$tmp") .push(label); // a < 0, goto label;
+    
+    // check if a <= 0 (if true, a == 0, jump to after goto label;)
+    af.push("$tmp") .push("$tmp");
+    af.push(a)      .push("$tmp");
+    af.push("$tmp2").push("$tmp2");
+    af.push("$tmp") .push("$tmp2").push("4"); // jump to after goto label;
+    
+    af.push("$tmp") .push("$tmp") .push(label); // a > 0, goto label;
+    
+    token = af.readToken();
   }
   
   void readBf() { // if (!a) goto label;
