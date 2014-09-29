@@ -135,6 +135,7 @@ private:
   void initPseudoInstructions() {
     pseudo_instructions.insert("add");
     pseudo_instructions.insert("sub");
+    pseudo_instructions.insert("neg");
     pseudo_instructions.insert("clr");
     pseudo_instructions.insert("mov");
     pseudo_instructions.insert("jmp");
@@ -158,7 +159,7 @@ private:
   void readDataSection() {
     // for pseudo-instructions
     af.push("$tmp:")  .push("0");
-    af.push("$zero:") .push("0");
+    af.push("$tmp2:") .push("0");
     
     for (token = af.readToken(); token != ".text";) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
@@ -213,6 +214,9 @@ private:
         }
         else if (token == "sub") {
           readSub();
+        }
+        else if (token == "neg") {
+          readNeg();
         }
         else if (token == "clr") {
           readClr();
@@ -299,6 +303,10 @@ private:
     }
   }
   
+  void readNeg() {
+    //TODO
+  }
+  
   void readClr() { // a = 0;
     string a = af.readToken();
     af.push(a).push(a);
@@ -317,12 +325,15 @@ private:
   
   void readJmp() { // goto label;
     string label = af.readToken();
-    af.push("$zero").push("$zero").push(label);
+    af.push("$tmp").push("$tmp").push(label);
     token = af.readToken();
   }
   
   void readBeq() { // if (a == b) goto label;
-    //TODO
+    string a = af.readToken();
+    string b = af.readToken();
+    string label = af.readToken();
+    //FIXME af.push("")
   }
   
   void readBne() { // if (a != b) goto label;
@@ -330,11 +341,27 @@ private:
   }
   
   void readBge() { // if (a >= b) goto label;
-    //TODO
+    string a = af.readToken();
+    string b = af.readToken();
+    string label = af.readToken();
+    af.push("$tmp")   .push("$tmp");
+    af.push(b)        .push("$tmp");
+    af.push("$tmp2")  .push("$tmp2");
+    af.push("$tmp")   .push("$tmp2");
+    af.push(a)        .push("$tmp2");
+    token = af.readToken();
   }
   
   void readBle() { // if (a <= b) goto label;
-    //TODO
+    string a = af.readToken();
+    string b = af.readToken();
+    string label = af.readToken();
+    af.push("$tmp")   .push("$tmp");
+    af.push(a)        .push("$tmp");
+    af.push("$tmp2")  .push("$tmp2");
+    af.push("$tmp")   .push("$tmp2");
+    af.push(b)        .push("$tmp2");
+    token = af.readToken();
   }
   
   void readBgt() { // if (a > b) goto label;
