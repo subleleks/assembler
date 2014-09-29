@@ -223,17 +223,17 @@ private:
     string b = af.readToken();
     string c = af.readToken();
     if (af.currentTokenLine == af.lastTokenLine) { // add a b c (a = b + c;)
-      af.push("$tmp").push("$tmp");
-      af.push(b).push("$tmp");
-      af.push(c).push("$tmp");
-      af.push(a).push(a);
-      af.push("$tmp").push(a);
+      af.push("$tmp") .push("$tmp");
+      af.push(b)      .push("$tmp");
+      af.push(c)      .push("$tmp");
+      af.push(a)      .push(a);
+      af.push("$tmp") .push(a);
       token = af.readToken();
     }
     else { // add a b (a += b;)
-      af.push("$tmp").push("$tmp");
-      af.push(b).push("$tmp");
-      af.push("$tmp").push(a);
+      af.push("$tmp") .push("$tmp");
+      af.push(b)      .push("$tmp");
+      af.push("$tmp") .push(a);
       if (token.size() == 0) { // no token left in the file after field b
         token = af.readToken();
       }
@@ -245,11 +245,11 @@ private:
     string b = af.readToken();
     string c = af.readToken();
     if (af.currentTokenLine == af.lastTokenLine) { // sub a b c (a = b - c;)
-      af.push("$tmp").push("$tmp");
-      af.push(b).push("$tmp");
-      af.push(a).push(a);
-      af.push("$tmp").push(a);
-      af.push(c).push(a);
+      af.push("$tmp") .push("$tmp");
+      af.push(b)      .push("$tmp");
+      af.push(a)      .push(a);
+      af.push("$tmp") .push(a);
+      af.push(c)      .push(a);
       token = af.readToken();
     }
     else { // sub a b (a -= b;)
@@ -269,10 +269,10 @@ private:
   void readMov() { // a = b;
     string a = af.readToken();
     string b = af.readToken();
-    af.push("$tmp").push("$tmp");
-    af.push(b).push("$tmp");
-    af.push(a).push(a);
-    af.push("$tmp").push(a);
+    af.push("$tmp") .push("$tmp");
+    af.push(b)      .push("$tmp");
+    af.push(a)      .push(a);
+    af.push("$tmp") .push(a);
     token = af.readToken();
   }
   
