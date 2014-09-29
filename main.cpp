@@ -138,6 +138,14 @@ private:
     pseudo_instructions.insert("clr");
     pseudo_instructions.insert("mov");
     pseudo_instructions.insert("jmp");
+    pseudo_instructions.insert("beq");
+    pseudo_instructions.insert("bne");
+    pseudo_instructions.insert("bge");
+    pseudo_instructions.insert("ble");
+    pseudo_instructions.insert("bgt");
+    pseudo_instructions.insert("blt");
+    pseudo_instructions.insert("bt");
+    pseudo_instructions.insert("bf");
   }
   
   void readExportSection() {
@@ -215,6 +223,30 @@ private:
         else if (token == "jmp") {
           readJmp();
         }
+        else if (token == "beq") {
+          readBeq();
+        }
+        else if (token == "bne") {
+          readBne();
+        }
+        else if (token == "bge") {
+          readBge();
+        }
+        else if (token == "ble") {
+          readBle();
+        }
+        else if (token == "bgt") {
+          readBgt();
+        }
+        else if (token == "blt") {
+          readBlt();
+        }
+        else if (token == "bt") {
+          readBt();
+        }
+        else if (token == "bf") {
+          readBf();
+        }
       }
       // field 0, 1, or field 2 specified
       else {
@@ -287,6 +319,38 @@ private:
     string label = af.readToken();
     af.push("$zero").push("$zero").push(label);
     token = af.readToken();
+  }
+  
+  void readBeq() { // if (a == b) goto label;
+    //TODO
+  }
+  
+  void readBne() { // if (a != b) goto label;
+    //TODO
+  }
+  
+  void readBge() { // if (a >= b) goto label;
+    //TODO
+  }
+  
+  void readBle() { // if (a <= b) goto label;
+    //TODO
+  }
+  
+  void readBgt() { // if (a > b) goto label;
+    //TODO
+  }
+  
+  void readBlt() { // if (a < b) goto label;
+    //TODO
+  }
+  
+  void readBt() { // if (a) goto label;
+    //TODO
+  }
+  
+  void readBf() { // if (!a) goto label;
+    //TODO
   }
   
   uword_t parseData() {
