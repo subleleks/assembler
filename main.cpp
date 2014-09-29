@@ -306,7 +306,24 @@ private:
   }
   
   void readNeg() {
-    //TODO
+    string a = af.readToken();
+    string b = af.readToken();
+    if (af.currentTokenLine == af.lastTokenLine) { // neg a b (a = -b;)
+      af.push(a)  .push(a);
+      af.push(b)  .push(a);
+      token = af.readToken();
+    }
+    else { // neg a (a = -a;)
+      af.push("$tmp")   .push("$tmp");
+      af.push(a)        .push("$tmp");
+      af.push("$tmp2")  .push("$tmp2");
+      af.push("$tmp")   .push("$tmp2");
+      af.push(a)        .push(a);
+      af.push("$tmp2")  .push(a);
+      if (token.size() == 0) { // no token left in the file after field a
+        token = af.readToken();
+      }
+    }
   }
   
   void readClr() { // a = 0;
