@@ -16,6 +16,7 @@
 
 using namespace std;
 
+typedef int32_t  word_t;
 typedef uint32_t uword_t;
 
 #ifndef MEM_WORDS
@@ -98,8 +99,9 @@ struct AssemblyFile {
 
 struct Field {
   uword_t word;
-  bool is_hex;
-  Field() : word(0), is_hex(false) {
+  word_t decimal_offset;
+  bool is_hex, is_dec;
+  Field() : word(0), is_hex(false), is_dec(false) {
     
   }
 };
@@ -395,11 +397,18 @@ private:
   
   Field parseField() {
     Field field;
-    if (token[0] == '0' && token[1] == 'x') { // checking for hex notation
+    // checking for hex notation
+    if (token[0] == '0' && token[1] == 'x') {
       sscanf(token.c_str(), "%i", &field.word);
       field.is_hex = true;
     }
-    else if (token.find("+") != string::npos) { // check for array offset
+    // checking for dec notation
+    else if ((token[0] >= '0' && token[0] <= '9') || token[0] == '-') {
+      sscanf(token.c_str(), "%d", &field.decimal_offset);
+      field.is_dec = true;
+    }
+    // check for array offset
+    else if (token.find("+") != string::npos) {
       string offset = token.substr(token.find("+") + 1, token.size());
       token = token.substr(0, token.find("+")); // remove offset from token
       stringstream ss;
@@ -413,12 +422,17 @@ private:
     Field field = parseField();
     if (!field.is_hex) {
       relatives.emplace(mem_size);
-      auto sym = symbols.find(token);
-      if (sym == symbols.end()) { // symbol not found. leave a reference
-        references[token].emplace(mem_size);
+      if (field.is_dec) {
+        field.word = uword_t(word_t(mem_size) + field.decimal_offset);
       }
-      else { // symbol found. the field is the address of the symbol
-        field.word += sym->second;
+      else {
+        auto sym = symbols.find(token);
+        if (sym == symbols.end()) { // symbol not found. leave a reference
+          references[token].emplace(mem_size);
+        }
+        else { // symbol found. the field is the address of the symbol
+          field.word += sym->second;
+        }
       }
     }
     mem[mem_size++] = field.word;
