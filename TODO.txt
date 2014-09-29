@@ -1,0 +1,1 @@
+slib: mul, div (with remainder), not, and, or, xor, sll, srl, sra
