@@ -137,6 +137,7 @@ private:
     pseudo_instructions.insert("sub");
     pseudo_instructions.insert("clr");
     pseudo_instructions.insert("mov");
+    pseudo_instructions.insert("jmp");
   }
   
   void readExportSection() {
@@ -147,7 +148,10 @@ private:
   }
   
   void readDataSection() {
-    af.push("$tmp:").push("0"); // for pseudo-instructions
+    // for pseudo-instructions
+    af.push("$tmp:")  .push("0");
+    af.push("$zero:") .push("0");
+    
     for (token = af.readToken(); token != ".text";) {
       symbols[token.substr(0, token.size() - 1)] = mem_size;
       token = af.readToken();
@@ -207,6 +211,9 @@ private:
         }
         else if (token == "mov") {
           readMov();
+        }
+        else if (token == "jmp") {
+          readJmp();
         }
       }
       // field 0, 1, or field 2 specified
@@ -273,6 +280,12 @@ private:
     af.push(b)      .push("$tmp");
     af.push(a)      .push(a);
     af.push("$tmp") .push(a);
+    token = af.readToken();
+  }
+  
+  void readJmp() { // goto label;
+    string label = af.readToken();
+    af.push("$zero").push("$zero").push(label);
     token = af.readToken();
   }
   
